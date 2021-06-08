@@ -2,8 +2,8 @@ HELP.md
 cache/
 target/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**
-!**/src/test/**
+!**/src/main/**/build/
+!**/src/test/**/build/
 hs_err_pid*
 
 ### STS ###
@@ -28,7 +28,6 @@ hs_err_pid*
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
 
 ### VS Code ###
 .vscode/
