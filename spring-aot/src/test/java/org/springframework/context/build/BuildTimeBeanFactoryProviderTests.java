@@ -23,7 +23,7 @@ class BuildTimeBeanFactoryProviderTests {
 	private final TypeSystem typeSystem = TypeSystem.getTypeSystem(new DefaultResourceLoader());
 
 	@Test
-	void refreshWithRegisteredConfigurationClasses() {
+	void processBeanDefinitionsWithRegisteredConfigurationClasses() {
 		BuildTimeBeanFactoryProvider beanFactoryProvider = forApplicationContext(new GenericApplicationContext());
 		beanFactoryProvider.register(CONFIGURATION_ONE, CONFIGURATION_TWO);
 		ConfigurableListableBeanFactory beanFactory = beanFactoryProvider.processBeanDefinitions();
@@ -32,12 +32,21 @@ class BuildTimeBeanFactoryProviderTests {
 	}
 
 	@Test
-	void refreshWithRegisteredConfigurationClassWithImport() {
+	void processBeanDefinitionsWithRegisteredConfigurationClassWithImport() {
 		BuildTimeBeanFactoryProvider context = forApplicationContext(new GenericApplicationContext());
 		context.register("org.springframework.context.build.samples.compose.ImportConfiguration");
 		ConfigurableListableBeanFactory beanFactory = context.processBeanDefinitions();
 		assertThat(beanFactory.getBeanDefinitionNames()).containsOnly("importConfiguration",
 				CONFIGURATION_ONE, CONFIGURATION_TWO, "beanOne", "beanTwo");
+	}
+
+	@Test
+	void processBeanDefinitionsWithClasspathScanning() {
+		BuildTimeBeanFactoryProvider context = forApplicationContext(new GenericApplicationContext());
+		context.register("org.springframework.context.build.samples.scan.ScanConfiguration");
+		ConfigurableListableBeanFactory beanFactory = context.processBeanDefinitions();
+		assertThat(beanFactory.getBeanDefinitionNames()).containsOnly("scanConfiguration",
+				"configurationOne", "configurationTwo", "simpleComponent", "beanOne", "beanTwo");
 	}
 
 	private BuildTimeBeanFactoryProvider forApplicationContext(GenericApplicationContext context) {
