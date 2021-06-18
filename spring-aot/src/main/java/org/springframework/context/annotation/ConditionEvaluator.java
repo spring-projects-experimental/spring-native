@@ -16,27 +16,21 @@
 
 package org.springframework.context.annotation;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotatedTypeMetadata;
-import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.MultiValueMap;
 
 /**
  * Internal class used to evaluate {@link Conditional} annotations.
@@ -49,6 +43,8 @@ class ConditionEvaluator {
 
 	private final ConditionContextImpl context;
 
+	private final ConditionEvaluationStateReport report;
+
 
 	/**
 	 * Create a new {@link ConditionEvaluator} instance.
@@ -57,8 +53,8 @@ class ConditionEvaluator {
 			@Nullable Environment environment, @Nullable ResourceLoader resourceLoader) {
 
 		this.context = new ConditionContextImpl(registry, environment, resourceLoader);
+		this.report = ConditionEvaluationStateReport.get(this.context.getBeanFactory());
 	}
-
 
 	/**
 	 * Determine if an item should be skipped based on {@code @Conditional} annotations.
@@ -67,8 +63,10 @@ class ConditionEvaluator {
 	 * @param metadata the meta data
 	 * @return if the item should be skipped
 	 */
+	// Used by classpath scanning and for beans that are registered manually
 	public boolean shouldSkip(AnnotatedTypeMetadata metadata) {
-		return shouldSkip(metadata, null);
+		ConditionEvaluationState ignoredState = new ConditionEvaluationState(Conditions.from(metadata));
+		return shouldSkip(ignoredState, ignoredState.getConditions().getRequiredPhase());
 	}
 
 	/**
@@ -77,52 +75,60 @@ class ConditionEvaluator {
 	 * @param phase the phase of the call
 	 * @return if the item should be skipped
 	 */
-	public boolean shouldSkip(@Nullable AnnotatedTypeMetadata metadata, @Nullable ConfigurationPhase phase) {
-		if (metadata == null || !metadata.isAnnotated(Conditional.class.getName())) {
-			return false;
-		}
+	// This should not been necessary, @ComponentScan checking conditions on the wrong class, gh-27077
+	public boolean shouldSkip(AnnotatedTypeMetadata metadata, ConfigurationPhase phase) {
+		ConditionEvaluationState ignoredState = new ConditionEvaluationState(Conditions.from(metadata));
+		return shouldSkip(ignoredState, phase);
+	}
 
+	public boolean shouldSkip(ConfigurationClass configurationClass, ConfigurationPhase phase) {
+		return shouldSkip(this.report.forConfigurationClass(configurationClass), phase);
+	}
+
+	public boolean shouldSkip(BeanMethod beanMethod, ConfigurationPhase phase) {
+		return shouldSkip(this.report.forBeanMethod(beanMethod), phase);
+	}
+
+	public boolean shouldSkip(ConditionEvaluationState state, @Nullable ConfigurationPhase phase) {
+		Conditions conditions = state.getConditions();
 		if (phase == null) {
-			if (metadata instanceof AnnotationMetadata &&
-					ConfigurationClassUtils.isConfigurationCandidate((AnnotationMetadata) metadata)) {
-				return shouldSkip(metadata, ConfigurationPhase.PARSE_CONFIGURATION);
-			}
-			return shouldSkip(metadata, ConfigurationPhase.REGISTER_BEAN);
+			return shouldSkip(state, conditions.getRequiredPhase());
 		}
-
-		List<Condition> conditions = new ArrayList<>();
-		for (String[] conditionClasses : getConditionClasses(metadata)) {
-			for (String conditionClass : conditionClasses) {
-				Condition condition = getCondition(conditionClass, this.context.getClassLoader());
-				conditions.add(condition);
-			}
+		ConditionEvaluation existingEvaluation = state.getConditionEvaluation(phase);
+		if (existingEvaluation != null) {
+			//System.out.println("====== WARNING ======");
+			//System.out.println("We already have an evaluation for " + conditions.determineAnnotatedTypeId() + " and phase " + phase);
+			return existingEvaluation.shouldSkip();
 		}
-
-		AnnotationAwareOrderComparator.sort(conditions);
-
-		for (Condition condition : conditions) {
-			ConfigurationPhase requiredPhase = null;
-			if (condition instanceof ConfigurationCondition) {
-				requiredPhase = ((ConfigurationCondition) condition).getConfigurationPhase();
-			}
-			if ((requiredPhase == null || requiredPhase == phase) && !condition.matches(this.context, metadata)) {
-				return true;
-			}
-		}
-
-		return false;
+		ConditionEvaluation evaluation = evaluate(conditions, phase);
+		state.recordConditionEvaluation(phase, evaluation);
+		return evaluation.shouldSkip();
 	}
 
-	@SuppressWarnings("unchecked")
-	private List<String[]> getConditionClasses(AnnotatedTypeMetadata metadata) {
-		MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(Conditional.class.getName(), true);
-		Object values = (attributes != null ? attributes.get("value") : null);
-		return (List<String[]>) (values != null ? values : Collections.emptyList());
+	private ConditionEvaluation evaluate(Conditions conditions, ConfigurationPhase phase) {
+		List<Condition> conditionInstances = conditions.instantiate(this.context.classLoader);
+		ConditionEvaluation.Builder stateBuilder = ConditionEvaluation.forConditions(conditionInstances);
+		for (Condition condition : conditionInstances) {
+			if (!hasRequiredPhase(condition, phase)) {
+				stateBuilder.notMatchingPhase(condition);
+			}
+			else {
+				boolean matches = condition.matches(context, conditions.getMetadata());
+				if (!matches) {
+					return stateBuilder.didNotMatch(condition);
+				}
+				stateBuilder.matchAndContinue(condition);
+			}
+		}
+		return stateBuilder.match();
 	}
 
-	private Condition getCondition(String conditionClassName, @Nullable ClassLoader classloader) {
-		Class<?> conditionClass = ClassUtils.resolveClassName(conditionClassName, classloader);
-		return (Condition) BeanUtils.instantiateClass(conditionClass);
+	private boolean hasRequiredPhase(Condition condition, ConfigurationPhase phase) {
+		ConfigurationPhase requiredPhase = null;
+		if (condition instanceof ConfigurationCondition) {
+			requiredPhase = ((ConfigurationCondition) condition).getConfigurationPhase();
+		}
+		return (requiredPhase == null || requiredPhase == phase);
 	}
 
 

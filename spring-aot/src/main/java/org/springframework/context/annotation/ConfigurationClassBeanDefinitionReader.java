@@ -190,7 +190,7 @@ class ConfigurationClassBeanDefinitionReader {
 		String methodName = metadata.getMethodName();
 
 		// Do we need to mark the bean as skipped by its condition?
-		if (this.conditionEvaluator.shouldSkip(metadata, ConfigurationPhase.REGISTER_BEAN)) {
+		if (this.conditionEvaluator.shouldSkip(beanMethod, ConfigurationPhase.REGISTER_BEAN)) {
 			configClass.skippedBeanMethods.add(methodName);
 			return;
 		}
@@ -486,7 +486,7 @@ class ConfigurationClassBeanDefinitionReader {
 					}
 				}
 				if (skip == null) {
-					skip = conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN);
+					skip = conditionEvaluator.shouldSkip(configClass, ConfigurationPhase.REGISTER_BEAN);
 				}
 				this.skipped.put(configClass, skip);
 			}
