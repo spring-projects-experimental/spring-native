@@ -1,14 +1,14 @@
-package org.springframework.context.build.samples.simple;
+package org.springframework.context.annotation.samples.simple;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
-public class ConfigurationOne {
+public class ConfigurationTwo {
 
 	@Bean
-	String beanOne() {
-		return "one";
+	String beanTwo() {
+		return "two";
 	}
 
 }

@@ -1,4 +1,4 @@
-package org.springframework.context.build.samples.simple;
+package org.springframework.context.annotation.samples.simple;
 
 import org.springframework.stereotype.Component;
 

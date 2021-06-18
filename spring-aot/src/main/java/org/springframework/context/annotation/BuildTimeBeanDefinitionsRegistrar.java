@@ -1,4 +1,4 @@
-package org.springframework.context.build;
+package org.springframework.context.annotation;
 
 import java.io.IOException;
 
@@ -8,9 +8,6 @@ import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
 import org.springframework.beans.factory.support.BeanNameGenerator;
-import org.springframework.context.annotation.AnnotatedMetadataGenericBeanDefinition;
-import org.springframework.context.annotation.AnnotationBeanNameGenerator;
-import org.springframework.context.annotation.ConfigurationClassPostProcessor;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
@@ -19,12 +16,13 @@ import org.springframework.core.type.classreading.TypeDescriptor;
 import org.springframework.core.type.classreading.TypeSystem;
 
 /**
- * A prototype of {@link GenericApplicationContext} that is intended to be used at build
- * time.
+ * Parse the {@link Configuration @Configuration classes} and provide the bean definitions
+ * at build time.
  *
  * @author Stephane Nicoll
+ * @see ConditionEvaluationStateReport
  */
-public class BuildTimeBeanFactoryProvider {
+public class BuildTimeBeanDefinitionsRegistrar {
 
 	private final GenericApplicationContext context;
 
@@ -34,7 +32,7 @@ public class BuildTimeBeanFactoryProvider {
 
 	private final BeanNameGenerator beanNameGenerator = AnnotationBeanNameGenerator.INSTANCE;
 
-	public BuildTimeBeanFactoryProvider(GenericApplicationContext context, TypeSystem typeSystem) {
+	public BuildTimeBeanDefinitionsRegistrar(GenericApplicationContext context, TypeSystem typeSystem) {
 		this.context = context;
 		this.typeSystem = typeSystem;
 		this.metadataReaderFactory = new SimpleMetadataReaderFactory();
@@ -88,4 +86,5 @@ public class BuildTimeBeanFactoryProvider {
 			throw new BeanDefinitionStoreException(String.format("Failure while reading metadata for %s.", typeDescriptor), ex);
 		}
 	}
+
 }
