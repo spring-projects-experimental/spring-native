@@ -17,11 +17,13 @@
 package org.springframework.context.annotation;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.env.StandardEnvironment;
@@ -106,29 +108,46 @@ class ConditionEvaluator {
 	}
 
 	private ConditionEvaluation evaluate(Conditions conditions, ConfigurationPhase phase) {
-		List<Condition> conditionInstances = conditions.instantiate(this.context.classLoader);
-		ConditionEvaluation.Builder stateBuilder = ConditionEvaluation.forConditions(conditionInstances);
-		for (Condition condition : conditionInstances) {
-			if (!hasRequiredPhase(condition, phase)) {
-				stateBuilder.notMatchingPhase(condition);
+		List<ConditionHolder> conditionHolders = conditions.getConditionDefinitions().stream().map((definition)
+				-> new ConditionHolder(definition, definition.newInstance(this.context.classLoader)))
+				.filter((holder) -> holder.hasRequiredPhase(phase))
+				.sorted().collect(Collectors.toList());
+		ConditionEvaluation.Builder stateBuilder = ConditionEvaluation.forConditions(conditionHolders.stream()
+				.map((holder) -> holder.definition).collect(Collectors.toList()));
+		for (ConditionHolder holder : conditionHolders) {
+			Condition condition = holder.instance;
+			boolean matches = condition.matches(context, conditions.getMetadata());
+			if (!matches) {
+				return stateBuilder.didNotMatch(holder.definition);
 			}
-			else {
-				boolean matches = condition.matches(context, conditions.getMetadata());
-				if (!matches) {
-					return stateBuilder.didNotMatch(condition);
-				}
-				stateBuilder.matchAndContinue(condition);
-			}
+			stateBuilder.matchAndContinue(holder.definition);
 		}
 		return stateBuilder.match();
 	}
 
-	private boolean hasRequiredPhase(Condition condition, ConfigurationPhase phase) {
-		ConfigurationPhase requiredPhase = null;
-		if (condition instanceof ConfigurationCondition) {
-			requiredPhase = ((ConfigurationCondition) condition).getConfigurationPhase();
+	private static class ConditionHolder implements Comparable<ConditionHolder> {
+
+		private final ConditionDefinition definition;
+
+		private final Condition instance;
+
+		public ConditionHolder(ConditionDefinition definition, Condition instance) {
+			this.definition = definition;
+			this.instance = instance;
 		}
-		return (requiredPhase == null || requiredPhase == phase);
+
+		private boolean hasRequiredPhase(ConfigurationPhase phase) {
+			ConfigurationPhase requiredPhase = null;
+			if (this.instance instanceof ConfigurationCondition) {
+				requiredPhase = ((ConfigurationCondition) instance).getConfigurationPhase();
+			}
+			return (requiredPhase == null || requiredPhase == phase);
+		}
+
+		@Override
+		public int compareTo(ConditionHolder other) {
+			return AnnotationAwareOrderComparator.INSTANCE.compare(this.instance, other.instance);
+		}
 	}
 
 

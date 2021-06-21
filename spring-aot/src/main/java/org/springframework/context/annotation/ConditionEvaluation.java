@@ -16,16 +16,16 @@ import org.springframework.lang.Nullable;
 public final class ConditionEvaluation {
 
 	@Nullable
-	private final Condition notMatching;
+	private final ConditionDefinition notMatching;
 
-	private final List<Condition> matching;
+	private final List<ConditionDefinition> matching;
 
-	private final List<Condition> filtered;
+	private final List<ConditionDefinition> filtered;
 
-	private final List<Condition> skipped;
+	private final List<ConditionDefinition> skipped;
 
-	ConditionEvaluation(@Nullable Condition notMatching, List<Condition> matching,
-			List<Condition> filtered, List<Condition> skipped) {
+	ConditionEvaluation(@Nullable ConditionDefinition notMatching, List<ConditionDefinition> matching,
+			List<ConditionDefinition> filtered, List<ConditionDefinition> skipped) {
 		this.notMatching = notMatching;
 		this.matching = matching;
 		this.filtered = filtered;
@@ -41,12 +41,12 @@ public final class ConditionEvaluation {
 	}
 
 	/**
-	 * Return the {@link Condition} that lead to the component to be skipped, or {@code null}
+	 * Return the {@link ConditionDefinition} that lead to the component to be skipped, or {@code null}
 	 * if no such condition exists in this instance.
 	 * @return the condition that did not match, or {@code null}
 	 */
 	@Nullable
-	public Condition getNotMatching() {
+	public ConditionDefinition getNotMatching() {
 		return this.notMatching;
 	}
 
@@ -54,7 +54,7 @@ public final class ConditionEvaluation {
 	 * Return the conditions that were executed and that matches.
 	 * @return the conditions that matched
 	 */
-	public List<Condition> getMatching() {
+	public List<ConditionDefinition> getMatching() {
 		return this.matching;
 	}
 
@@ -62,7 +62,7 @@ public final class ConditionEvaluation {
 	 * Return the conditions that were not executed.
 	 * @return the filtered conditions
 	 */
-	public List<Condition> getFiltered() {
+	public List<ConditionDefinition> getFiltered() {
 		return this.filtered;
 	}
 
@@ -71,7 +71,7 @@ public final class ConditionEvaluation {
 	 * further processing stopped
 	 * @return the skipped conditions
 	 */
-	public List<Condition> getSkipped() {
+	public List<ConditionDefinition> getSkipped() {
 		return this.skipped;
 	}
 
@@ -80,7 +80,7 @@ public final class ConditionEvaluation {
 	 * @param conditions the conditions to initialize the builder
 	 * @return a builder
 	 */
-	public static Builder forConditions(List<Condition> conditions) {
+	public static Builder forConditions(List<ConditionDefinition> conditions) {
 		return new Builder(conditions);
 	}
 
@@ -96,31 +96,27 @@ public final class ConditionEvaluation {
 
 	public static class Builder {
 
-		private final List<Condition> conditions;
+		private final List<ConditionDefinition> conditions;
 
-		private final List<Condition> filtered = new ArrayList<>();
+		private final List<ConditionDefinition> filtered = new ArrayList<>();
 
-		private final List<Condition> matching = new ArrayList<>();
+		private final List<ConditionDefinition> matching = new ArrayList<>();
 
-		private Builder(List<Condition> conditions) {
+		private Builder(List<ConditionDefinition> conditions) {
 			this.conditions = new ArrayList<>(conditions);
 		}
 
-		public Builder notMatchingPhase(Condition condition) {
-			return processed(condition);
-		}
-
-		public Builder filtered(Condition condition) {
+		public Builder filtered(ConditionDefinition condition) {
 			this.filtered.add(condition);
 			return processed(condition);
 		}
 
-		public Builder matchAndContinue(Condition condition) {
+		public Builder matchAndContinue(ConditionDefinition condition) {
 			this.matching.add(condition);
 			return processed(condition);
 		}
 
-		public ConditionEvaluation didNotMatch(Condition condition) {
+		public ConditionEvaluation didNotMatch(ConditionDefinition condition) {
 			processed(condition);
 			return new ConditionEvaluation(condition, this.matching,
 					this.filtered, new ArrayList<>(this.conditions));
@@ -135,7 +131,7 @@ public final class ConditionEvaluation {
 
 		}
 
-		private Builder processed(Condition condition) {
+		private Builder processed(ConditionDefinition condition) {
 			if (!this.conditions.remove(condition)) {
 				throw new IllegalArgumentException("Condition " + condition + " does not exist");
 			}

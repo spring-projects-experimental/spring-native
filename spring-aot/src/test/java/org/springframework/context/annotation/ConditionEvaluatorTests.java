@@ -6,6 +6,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
 import org.springframework.context.annotation.samples.condition.ConditionalConfigurationOne;
 import org.springframework.context.annotation.samples.simple.ConfigurationOne;
@@ -66,7 +67,8 @@ class ConditionEvaluatorTests {
 		assertConditionEvaluationState(configurationClass, (state) -> {
 			assertThat(state.getConditionEvaluation(ConfigurationPhase.PARSE_CONFIGURATION)).satisfies((evaluation) -> {
 				assertThat(evaluation.shouldSkip()).isTrue();
-				assertThat(evaluation.getNotMatching()).satisfies(hasConditionType("OnPropertyCondition"));
+				assertThat(evaluation.getNotMatching()).isNotNull();
+				assertThat(evaluation.getNotMatching().getAnnotation().getRoot().getType()).isEqualTo(ConditionalOnProperty.class);
 				assertThat(evaluation.getMatching()).isEmpty();
 				assertThat(evaluation.getFiltered()).isEmpty();
 				assertThat(evaluation.getSkipped()).isEmpty();
@@ -84,16 +86,13 @@ class ConditionEvaluatorTests {
 			assertThat(state.getConditionEvaluation(ConfigurationPhase.PARSE_CONFIGURATION)).satisfies((evaluation) -> {
 				assertThat(evaluation.shouldSkip()).isFalse();
 				assertThat(evaluation.getNotMatching()).isNull();
-				assertThat(evaluation.getMatching()).singleElement().satisfies(hasConditionType("OnPropertyCondition"));
+				assertThat(evaluation.getMatching()).singleElement().satisfies((match) ->
+						assertThat(match.getAnnotation().getRoot().getType()).isEqualTo(ConditionalOnProperty.class));
 				assertThat(evaluation.getFiltered()).isEmpty();
 				assertThat(evaluation.getSkipped()).isEmpty();
 			});
 			assertThat(state.getConditionEvaluation(ConfigurationPhase.REGISTER_BEAN)).isNull();
 		});
-	}
-
-	private Consumer<Condition> hasConditionType(String name) {
-		return (instance) -> assertThat(instance.getClass().getName()).endsWith(name);
 	}
 
 	private Consumer<ConditionEvaluation> hasNoCondition() {

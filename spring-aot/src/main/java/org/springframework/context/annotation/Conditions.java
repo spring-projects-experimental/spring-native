@@ -1,19 +1,14 @@
 package org.springframework.context.annotation;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.ClassMetadata;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.lang.Nullable;
-import org.springframework.util.ClassUtils;
-import org.springframework.util.MultiValueMap;
 
 /**
  * Abstractions for {@link Conditions} read on an annotated type.
@@ -24,26 +19,20 @@ final class Conditions {
 
 	private final AnnotatedTypeMetadata metadata;
 
-	private final List<String> conditionClassNames;
+	private final List<ConditionDefinition> conditionDefinitions;
 
-	Conditions(@Nullable AnnotatedTypeMetadata metadata, @Nullable List<String> conditionClassNames) {
+	private Conditions(@Nullable AnnotatedTypeMetadata metadata, @Nullable List<ConditionDefinition> conditionDefinitions) {
 		this.metadata = metadata;
-		this.conditionClassNames = (conditionClassNames != null)
-				? new ArrayList<>(conditionClassNames) : new ArrayList<>();
-	}
-
-	List<Condition> instantiate(@Nullable ClassLoader classLoader) {
-		List<Condition> conditions = new ArrayList<>();
-		conditionClassNames.forEach((conditionClassName) -> {
-			Class<?> conditionClass = ClassUtils.resolveClassName(conditionClassName, classLoader);
-			conditions.add((Condition) BeanUtils.instantiateClass(conditionClass));
-		});
-		AnnotationAwareOrderComparator.sort(conditions);
-		return conditions;
+		this.conditionDefinitions = (conditionDefinitions != null)
+				? new ArrayList<>(conditionDefinitions) : new ArrayList<>();
 	}
 
 	AnnotatedTypeMetadata getMetadata() {
 		return this.metadata;
+	}
+
+	List<ConditionDefinition> getConditionDefinitions() {
+		return this.conditionDefinitions;
 	}
 
 	ConfigurationPhase getRequiredPhase() {
@@ -74,18 +63,17 @@ final class Conditions {
 		if (metadata == null || !metadata.isAnnotated(Conditional.class.getName())) {
 			return new Conditions(metadata, null);
 		}
-		List<String> conditions = new ArrayList<>();
-		for (String[] conditionClasses : getConditionClasses(metadata)) {
-			Collections.addAll(conditions, conditionClasses);
-		}
-		return new Conditions(metadata, conditions);
+		return new Conditions(metadata, getConditionClasses(metadata));
 	}
 
-	@SuppressWarnings("unchecked")
-	private static List<String[]> getConditionClasses(AnnotatedTypeMetadata metadata) {
-		MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(Conditional.class.getName(), true);
-		Object values = (attributes != null ? attributes.get("value") : null);
-		return (List<String[]>) (values != null ? values : Collections.emptyList());
+	private static List<ConditionDefinition> getConditionClasses(AnnotatedTypeMetadata metadata) {
+		List<ConditionDefinition> definitions = new ArrayList<>();
+		metadata.getAnnotations().stream(Conditional.class).forEach((annotation) -> {
+			for (String className : annotation.getStringArray("value")) {
+				definitions.add(new ConditionDefinition(annotation, className));
+			}
+		});
+		return definitions;
 	}
 
 }
