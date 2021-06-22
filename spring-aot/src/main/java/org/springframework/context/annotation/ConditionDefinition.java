@@ -16,16 +16,16 @@ class ConditionDefinition {
 
 	private final MergedAnnotation<Conditional> annotation;
 
-	private final String className;
+	private final String conditionType;
 
 	/**
 	 * Create a new instance using the annotation and the class name of the condition
 	 * @param annotation the annotation that defines this condition
-	 * @param className the condition instance
+	 * @param conditionType the condition type
 	 */
-	ConditionDefinition(MergedAnnotation<Conditional> annotation, String className) {
+	ConditionDefinition(MergedAnnotation<Conditional> annotation, String conditionType) {
 		this.annotation = annotation;
-		this.className = className;
+		this.conditionType = conditionType;
 	}
 
 	/**
@@ -40,8 +40,8 @@ class ConditionDefinition {
 	 * Return the fully qualified name of the {@link Condition} implementation.
 	 * @return the class name of the condition
 	 */
-	public String getClassName() {
-		return this.className;
+	public String getConditionType() {
+		return this.conditionType;
 	}
 
 	/**
@@ -50,14 +50,15 @@ class ConditionDefinition {
 	 * @return a condition instance
 	 */
 	Condition newInstance(@Nullable ClassLoader classLoader) {
-		Class<?> conditionClass = ClassUtils.resolveClassName(this.className, classLoader);
+		Class<?> conditionClass = ClassUtils.resolveClassName(this.conditionType, classLoader);
 		return (Condition) BeanUtils.instantiateClass(conditionClass);
 	}
 
 	@Override
 	public String toString() {
 		return new StringJoiner(", ", ConditionDefinition.class.getSimpleName() + "[", "]")
-				.add("className='" + this.className + "'")
+				.add("annotation=" + this.annotation)
+				.add("className='" + this.conditionType + "'")
 				.toString();
 	}
 }

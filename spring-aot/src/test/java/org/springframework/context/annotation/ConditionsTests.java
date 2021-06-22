@@ -47,26 +47,31 @@ class ConditionsTests {
 	@Test
 	void getConditionDefinitionsWithSingleCondition() {
 		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(SingleCondition.class));
-		assertThat(conditions.getConditionDefinitions()).singleElement().satisfies(condition(
-				"org.springframework.boot.autoconfigure.condition.OnClassCondition", ConditionalOnClass.class));
+		assertThat(conditions.getConditionDefinitions()).singleElement().satisfies(hasRootAnnotation(ConditionalOnClass.class));
 	}
 
 	@Test
 	void getConditionDefinitionsWithTwoConditionsUsingConditional() {
 		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(TwoConditionsUsingConditional.class));
 		assertThat(conditions.getConditionDefinitions()).hasSize(2);
-		assertThat(conditions.getConditionDefinitions().get(0)).satisfies(condition(AlwaysCondition.class, Conditional.class));
-		assertThat(conditions.getConditionDefinitions().get(1)).satisfies(condition(NeverCondition.class, Conditional.class));
+		assertThat(conditions.getConditionDefinitions().get(0)).satisfies(hasDefinition(Conditional.class, AlwaysCondition.class));
+		assertThat(conditions.getConditionDefinitions().get(1)).satisfies(hasDefinition(Conditional.class, NeverCondition.class));
 	}
 
 	@Test
 	void getConditionDefinitionsWithTwoConditionsUsingDedicatedAnnotations() {
 		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(TwoConditionsUsingDedicatedAnnotations.class));
 		assertThat(conditions.getConditionDefinitions()).hasSize(2);
-		assertThat(conditions.getConditionDefinitions().get(0)).satisfies(condition(
-				"org.springframework.boot.autoconfigure.condition.OnClassCondition", ConditionalOnClass.class));
-		assertThat(conditions.getConditionDefinitions().get(1)).satisfies(condition(
-				"org.springframework.boot.autoconfigure.condition.OnPropertyCondition", ConditionalOnProperty.class));
+		assertThat(conditions.getConditionDefinitions().get(0)).satisfies(hasRootAnnotation(ConditionalOnClass.class));
+		assertThat(conditions.getConditionDefinitions().get(1)).satisfies(hasRootAnnotation(ConditionalOnProperty.class));
+	}
+
+	@Test
+	void getConditionDefinitionsCanInstantiateCondition() {
+		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(TwoConditionsUsingConditional.class));
+		assertThat(conditions.getConditionDefinitions()).hasSize(2);
+		assertThat(conditions.getConditionDefinitions().get(0).newInstance(null)).isInstanceOf(AlwaysCondition.class);
+		assertThat(conditions.getConditionDefinitions().get(1).newInstance(null)).isInstanceOf(NeverCondition.class);
 	}
 
 	@Test
@@ -104,14 +109,15 @@ class ConditionsTests {
 	}
 
 
-	private Consumer<ConditionDefinition> condition(Class<? extends Condition> implementation, Class<? extends Annotation> rootAnnotation) {
-		return condition(implementation.getName(), rootAnnotation);
+	private Consumer<ConditionDefinition> hasRootAnnotation(Class<? extends Annotation> rootAnnotation) {
+		return (definition) -> assertThat(definition.getAnnotation().getRoot().getType()).isEqualTo(rootAnnotation);
 	}
 
-	private Consumer<ConditionDefinition> condition(String implementationClassName, Class<? extends Annotation> rootAnnotation) {
+	private Consumer<ConditionDefinition> hasDefinition(Class<? extends Annotation> rootAnnotation,
+			Class<? extends Condition> conditionType) {
 		return (definition) -> {
-			assertThat(definition.getClassName()).isEqualTo(implementationClassName);
 			assertThat(definition.getAnnotation().getRoot().getType()).isEqualTo(rootAnnotation);
+			assertThat(definition.getConditionType()).isEqualTo(conditionType.getName());
 		};
 	}
 

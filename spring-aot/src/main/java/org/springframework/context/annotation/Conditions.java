@@ -69,8 +69,8 @@ final class Conditions {
 	private static List<ConditionDefinition> getConditionClasses(AnnotatedTypeMetadata metadata) {
 		List<ConditionDefinition> definitions = new ArrayList<>();
 		metadata.getAnnotations().stream(Conditional.class).forEach((annotation) -> {
-			for (String className : annotation.getStringArray("value")) {
-				definitions.add(new ConditionDefinition(annotation, className));
+			for (String conditionType : annotation.getStringArray("value")) {
+				definitions.add(new ConditionDefinition(annotation, conditionType));
 			}
 		});
 		return definitions;
