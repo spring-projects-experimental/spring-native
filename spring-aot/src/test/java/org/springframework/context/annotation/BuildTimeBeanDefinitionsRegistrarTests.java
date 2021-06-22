@@ -64,6 +64,32 @@ class BuildTimeBeanDefinitionsRegistrarTests {
 				ConfigurationOne.class.getName(), "beanOne", ConfigurationTwo.class.getName(), "beanTwo");
 	}
 
+	// Bean definitions
+
+	@Test
+	void processBeanDefinitionsForConfigurationClassCreateRelevantBeanDefinition() {
+		GenericApplicationContext context = createApplicationContext(GenericApplicationContext::new, ImportConfiguration.class);
+		ConfigurableListableBeanFactory beanFactory = new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
+		assertThat(beanFactory.getBeanDefinition(ConfigurationOne.class.getName()))
+				.isInstanceOfSatisfying(ConfigurationClassBeanDefinition.class, (bd) -> {
+					assertThat(bd.getConfigurationClass().getMetadata().getClassName()).isEqualTo(ConfigurationOne.class.getName());
+					assertThat(bd.getConfigurationClass().getImportedBy()).hasSize(1);
+				});
+	}
+
+	@Test
+	void processBeanDefinitionsForBeanMethodCreateRelevantBeanDefinition() {
+		GenericApplicationContext context = createApplicationContext(GenericApplicationContext::new, ImportConfiguration.class);
+		ConfigurableListableBeanFactory beanFactory = new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
+		assertThat(beanFactory.getBeanDefinition("beanOne"))
+				.isInstanceOfSatisfying(BeanMethodBeanDefinition.class, (bd) -> {
+					assertThat(bd.getFactoryMethodMetadata().getMethodName()).isEqualTo("beanOne");
+					assertThat(bd.getBeanMethod().getConfigurationClass().getBeanMethods())
+							.singleElement().isEqualTo(bd.getBeanMethod());
+				});
+	}
+
+
 	private <T extends GenericApplicationContext> T createApplicationContext(
 			Supplier<T> contextFactory, Class<?>... componentClasses) {
 		return createApplicationContext(contextFactory, new MockEnvironment(), componentClasses);

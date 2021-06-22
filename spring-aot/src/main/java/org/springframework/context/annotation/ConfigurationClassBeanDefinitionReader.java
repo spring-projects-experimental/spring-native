@@ -16,7 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.BeanDefinitionStoreException;
-import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.annotation.Autowire;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -53,7 +51,6 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.core.type.StandardAnnotationMetadata;
 import org.springframework.core.type.StandardMethodMetadata;
-import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -162,7 +159,7 @@ class ConfigurationClassBeanDefinitionReader {
 	 */
 	private void registerBeanDefinitionForImportedConfigurationClass(ConfigurationClass configClass) {
 		AnnotationMetadata metadata = configClass.getMetadata();
-		AnnotatedGenericBeanDefinition configBeanDef = new AnnotatedGenericBeanDefinition(metadata);
+		AnnotatedGenericBeanDefinition configBeanDef = new ConfigurationClassBeanDefinition(configClass);
 
 		ScopeMetadata scopeMetadata = scopeMetadataResolver.resolveScopeMetadata(configBeanDef);
 		configBeanDef.setScope(scopeMetadata.getScopeName());
@@ -220,7 +217,7 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
-		ConfigurationClassBeanDefinition beanDef = new ConfigurationClassBeanDefinition(configClass, metadata, beanName);
+		BeanMethodBeanDefinition beanDef = new BeanMethodBeanDefinition(beanMethod, beanName);
 		beanDef.setSource(this.sourceExtractor.extractSource(metadata, configClass.getResource()));
 
 		if (metadata.isStatic()) {
@@ -284,8 +281,8 @@ class ConfigurationClassBeanDefinitionReader {
 			BeanDefinitionHolder proxyDef = ScopedProxyCreator.createScopedProxy(
 					new BeanDefinitionHolder(beanDef, beanName), this.registry,
 					proxyMode == ScopedProxyMode.TARGET_CLASS);
-			beanDefToRegister = new ConfigurationClassBeanDefinition(
-					(RootBeanDefinition) proxyDef.getBeanDefinition(), configClass, metadata, beanName);
+			beanDefToRegister = new BeanMethodBeanDefinition(
+					(RootBeanDefinition) proxyDef.getBeanDefinition(), beanMethod, beanName);
 		}
 
 		if (logger.isTraceEnabled()) {
@@ -305,8 +302,8 @@ class ConfigurationClassBeanDefinitionReader {
 		// -> allow the current bean method to override, since both are at second-pass level.
 		// However, if the bean method is an overloaded case on the same configuration class,
 		// preserve the existing bean definition.
-		if (existingBeanDef instanceof ConfigurationClassBeanDefinition) {
-			ConfigurationClassBeanDefinition ccbd = (ConfigurationClassBeanDefinition) existingBeanDef;
+		if (existingBeanDef instanceof BeanMethodBeanDefinition) {
+			BeanMethodBeanDefinition ccbd = (BeanMethodBeanDefinition) existingBeanDef;
 			if (ccbd.getMetadata().getClassName().equals(
 					beanMethod.getConfigurationClass().getMetadata().getClassName())) {
 				if (ccbd.getFactoryMethodMetadata().getMethodName().equals(ccbd.getFactoryMethodName())) {
@@ -394,70 +391,6 @@ class ConfigurationClassBeanDefinitionReader {
 	private void loadBeanDefinitionsFromRegistrars(Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> registrars) {
 		registrars.forEach((registrar, metadata) ->
 				registrar.registerBeanDefinitions(metadata, this.registry, this.importBeanNameGenerator));
-	}
-
-
-	/**
-	 * {@link RootBeanDefinition} marker subclass used to signify that a bean definition
-	 * was created from a configuration class as opposed to any other configuration source.
-	 * Used in bean overriding cases where it's necessary to determine whether the bean
-	 * definition was created externally.
-	 */
-	@SuppressWarnings("serial")
-	private static class ConfigurationClassBeanDefinition extends RootBeanDefinition implements AnnotatedBeanDefinition {
-
-		private final AnnotationMetadata annotationMetadata;
-
-		private final MethodMetadata factoryMethodMetadata;
-
-		private final String derivedBeanName;
-
-		public ConfigurationClassBeanDefinition(
-				ConfigurationClass configClass, MethodMetadata beanMethodMetadata, String derivedBeanName) {
-
-			this.annotationMetadata = configClass.getMetadata();
-			this.factoryMethodMetadata = beanMethodMetadata;
-			this.derivedBeanName = derivedBeanName;
-			setResource(configClass.getResource());
-			setLenientConstructorResolution(false);
-		}
-
-		public ConfigurationClassBeanDefinition(RootBeanDefinition original,
-				ConfigurationClass configClass, MethodMetadata beanMethodMetadata, String derivedBeanName) {
-			super(original);
-			this.annotationMetadata = configClass.getMetadata();
-			this.factoryMethodMetadata = beanMethodMetadata;
-			this.derivedBeanName = derivedBeanName;
-		}
-
-		private ConfigurationClassBeanDefinition(ConfigurationClassBeanDefinition original) {
-			super(original);
-			this.annotationMetadata = original.annotationMetadata;
-			this.factoryMethodMetadata = original.factoryMethodMetadata;
-			this.derivedBeanName = original.derivedBeanName;
-		}
-
-		@Override
-		public AnnotationMetadata getMetadata() {
-			return this.annotationMetadata;
-		}
-
-		@Override
-		@NonNull
-		public MethodMetadata getFactoryMethodMetadata() {
-			return this.factoryMethodMetadata;
-		}
-
-		@Override
-		public boolean isFactoryMethod(Method candidate) {
-			return (super.isFactoryMethod(candidate) && BeanAnnotationHelper.isBeanAnnotated(candidate) &&
-					BeanAnnotationHelper.determineBeanNameFor(candidate).equals(this.derivedBeanName));
-		}
-
-		@Override
-		public ConfigurationClassBeanDefinition cloneBeanDefinition() {
-			return new ConfigurationClassBeanDefinition(this);
-		}
 	}
 
 
