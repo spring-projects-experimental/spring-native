@@ -2,6 +2,7 @@ package org.springframework.context.annotation;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -10,10 +11,15 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
 import org.springframework.core.type.AnnotatedTypeMetadata;
+import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.MethodMetadata;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.classreading.SimpleMetadataReaderFactory;
+import org.springframework.lang.Nullable;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 
 /**
@@ -33,20 +39,20 @@ class ConditionsTests {
 	}
 
 	@Test
-	void conditionDefinitionsWithNoCondition() {
+	void getConditionDefinitionsWithNoCondition() {
 		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(NoCondition.class));
 		assertThat(conditions.getConditionDefinitions()).isEmpty();
 	}
 
 	@Test
-	void conditionDefinitionsWithSingleCondition() {
+	void getConditionDefinitionsWithSingleCondition() {
 		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(SingleCondition.class));
 		assertThat(conditions.getConditionDefinitions()).singleElement().satisfies(condition(
 				"org.springframework.boot.autoconfigure.condition.OnClassCondition", ConditionalOnClass.class));
 	}
 
 	@Test
-	void conditionDefinitionsWithTwoConditionsUsingConditional() {
+	void getConditionDefinitionsWithTwoConditionsUsingConditional() {
 		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(TwoConditionsUsingConditional.class));
 		assertThat(conditions.getConditionDefinitions()).hasSize(2);
 		assertThat(conditions.getConditionDefinitions().get(0)).satisfies(condition(AlwaysCondition.class, Conditional.class));
@@ -54,7 +60,7 @@ class ConditionsTests {
 	}
 
 	@Test
-	void conditionDefinitionsWithTwoConditionsUsingDedicatedAnnotations() {
+	void getConditionDefinitionsWithTwoConditionsUsingDedicatedAnnotations() {
 		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(TwoConditionsUsingDedicatedAnnotations.class));
 		assertThat(conditions.getConditionDefinitions()).hasSize(2);
 		assertThat(conditions.getConditionDefinitions().get(0)).satisfies(condition(
@@ -75,6 +81,28 @@ class ConditionsTests {
 		assertThat(conditions.getRequiredPhase()).isEqualTo(ConfigurationPhase.PARSE_CONFIGURATION);
 	}
 
+	@Test
+	void determineAnnotatedTypeIdWithConfigurationClass() {
+		Conditions conditions = Conditions.from(getAnnotatedTypeMetadata(SingleCondition.class));
+		assertThat(conditions.determineAnnotatedTypeId()).isEqualTo(SingleCondition.class.getName());
+	}
+
+	@Test
+	void determineAnnotatedTypeIdWithBeanMethod() {
+		Conditions conditions = Conditions.from(getMethodMetadata(
+				getAnnotatedTypeMetadata(SingleCondition.class), ConditionalOnProperty.class));
+		assertThat(conditions.determineAnnotatedTypeId())
+				.isEqualTo("org.springframework.context.annotation.ConditionsTests$SingleCondition#test");
+	}
+
+	@Test
+	void determineAnnotatedTypeIdWithUnsupportedMetadataUsesToString() {
+		AnnotatedTypeMetadata metadata = mock(AnnotatedTypeMetadata.class);
+		given(metadata.toString()).willReturn("test");
+		Conditions conditions = Conditions.from(metadata);
+		assertThat(conditions.determineAnnotatedTypeId()).isEqualTo("test");
+	}
+
 
 	private Consumer<ConditionDefinition> condition(Class<? extends Condition> implementation, Class<? extends Annotation> rootAnnotation) {
 		return condition(implementation.getName(), rootAnnotation);
@@ -87,7 +115,7 @@ class ConditionsTests {
 		};
 	}
 
-	private static AnnotatedTypeMetadata getAnnotatedTypeMetadata(Class<?> type) {
+	private static AnnotationMetadata getAnnotatedTypeMetadata(Class<?> type) {
 		try {
 			return metadataReaderFactory.getMetadataReader(type.getName()).getAnnotationMetadata();
 		}
@@ -96,12 +124,23 @@ class ConditionsTests {
 		}
 	}
 
+	@Nullable
+	private static MethodMetadata getMethodMetadata(AnnotationMetadata classMetadata, Class<? extends Annotation> methodAnnotation) {
+		Set<MethodMetadata> result = classMetadata.getAnnotatedMethods(methodAnnotation.getName());
+		return (result.size() > 0) ? result.iterator().next() : null;
+	}
+
 	static class NoCondition {
 
 	}
 
 	@ConditionalOnClass(String.class)
 	static class SingleCondition {
+
+		@ConditionalOnProperty("test")
+		public String test() {
+			return "test";
+		}
 
 	}
 
