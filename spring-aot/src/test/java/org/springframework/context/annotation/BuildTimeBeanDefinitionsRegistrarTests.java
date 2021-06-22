@@ -25,59 +25,58 @@ class BuildTimeBeanDefinitionsRegistrarTests {
 
 	@Test
 	void processBeanDefinitionsWithRegisteredConfigurationClasses() {
-		BuildTimeBeanDefinitionsRegistrar beanFactoryProvider = forApplicationContext(GenericApplicationContext::new);
-		beanFactoryProvider.register(ConfigurationOne.class, ConfigurationTwo.class);
-		ConfigurableListableBeanFactory beanFactory = beanFactoryProvider.processBeanDefinitions();
+		GenericApplicationContext context = createApplicationContext(GenericApplicationContext::new,
+				ConfigurationOne.class, ConfigurationTwo.class);
+		ConfigurableListableBeanFactory beanFactory = new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
 		assertThat(beanFactory.getBeanDefinitionNames()).containsOnly(ConfigurationOne.class.getName(),
 				ConfigurationTwo.class.getName(), "beanOne", "beanTwo");
 	}
 
 	@Test
 	void processBeanDefinitionsWithRegisteredConfigurationClassWithImport() {
-		BuildTimeBeanDefinitionsRegistrar context = forApplicationContext(GenericApplicationContext::new);
-		context.register(ImportConfiguration.class);
-		ConfigurableListableBeanFactory beanFactory = context.processBeanDefinitions();
+		GenericApplicationContext context = createApplicationContext(GenericApplicationContext::new, ImportConfiguration.class);
+		ConfigurableListableBeanFactory beanFactory = new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
 		assertThat(beanFactory.getBeanDefinitionNames()).containsOnly(ImportConfiguration.class.getName(),
 				ConfigurationOne.class.getName(), ConfigurationTwo.class.getName(), "beanOne", "beanTwo");
 	}
 
 	@Test
 	void processBeanDefinitionsWithClasspathScanning() {
-		BuildTimeBeanDefinitionsRegistrar context = forApplicationContext(GenericApplicationContext::new);
-		context.register(ScanConfiguration.class);
-		ConfigurableListableBeanFactory beanFactory = context.processBeanDefinitions();
+		GenericApplicationContext context = createApplicationContext(GenericApplicationContext::new, ScanConfiguration.class);
+		ConfigurableListableBeanFactory beanFactory = new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
 		assertThat(beanFactory.getBeanDefinitionNames()).containsOnly(ScanConfiguration.class.getName(),
 				"configurationOne", "configurationTwo", "simpleComponent", "beanOne", "beanTwo");
 	}
 
 	@Test
 	void processBeanDefinitionsWithConditionsOnConfigurationClassNotMatching() {
-		BuildTimeBeanDefinitionsRegistrar context = forApplicationContext(GenericApplicationContext::new);
-		context.register(ConditionalConfigurationOne.class);
-		ConfigurableListableBeanFactory beanFactory = context.processBeanDefinitions();
+		GenericApplicationContext context = createApplicationContext(GenericApplicationContext::new, ConditionalConfigurationOne.class);
+		ConfigurableListableBeanFactory beanFactory = new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
 		assertThat(beanFactory.getBeanDefinitionNames()).containsOnly(ConditionalConfigurationOne.class.getName());
 	}
 
 	@Test
 	void processBeanDefinitionsWithConditionsOnConfigurationClassMatching() {
-		BuildTimeBeanDefinitionsRegistrar context = forApplicationContext(GenericApplicationContext::new,
-				new MockEnvironment().withProperty("test.one.enabled", "true"));
-		context.register(ConditionalConfigurationOne.class);
-		ConfigurableListableBeanFactory beanFactory = context.processBeanDefinitions();
+		GenericApplicationContext context = createApplicationContext(GenericApplicationContext::new,
+				new MockEnvironment().withProperty("test.one.enabled", "true"), ConditionalConfigurationOne.class);
+		ConfigurableListableBeanFactory beanFactory = new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
 		assertThat(beanFactory.getBeanDefinitionNames()).containsOnly(ConditionalConfigurationOne.class.getName(),
 				ConfigurationOne.class.getName(), "beanOne", ConfigurationTwo.class.getName(), "beanTwo");
 	}
 
-	private BuildTimeBeanDefinitionsRegistrar forApplicationContext(
-			Supplier<? extends GenericApplicationContext> contextFactory) {
-		return forApplicationContext(contextFactory, new MockEnvironment());
+	private <T extends GenericApplicationContext> T createApplicationContext(
+			Supplier<T> contextFactory, Class<?>... componentClasses) {
+		return createApplicationContext(contextFactory, new MockEnvironment(), componentClasses);
 	}
 
-	private BuildTimeBeanDefinitionsRegistrar forApplicationContext(
-			Supplier<? extends GenericApplicationContext> contextFactory, ConfigurableEnvironment environment) {
-		GenericApplicationContext context = contextFactory.get();
+	private <T extends GenericApplicationContext> T createApplicationContext(
+			Supplier<T> contextFactory, ConfigurableEnvironment environment, Class<?>... componentClasses) {
+		T context = contextFactory.get();
 		context.setEnvironment(environment);
-		return new BuildTimeBeanDefinitionsRegistrar(context);
+		for (Class<?> componentClass : componentClasses) {
+			context.registerBean(componentClass);
+		}
+		return context;
 	}
 
 }

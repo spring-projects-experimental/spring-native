@@ -2,6 +2,7 @@ package org.springframework.context.annotation;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.util.Assert;
 
 /**
  * Parse the {@link Configuration @Configuration classes} and provide the bean definitions
@@ -15,15 +16,10 @@ public class BuildTimeBeanDefinitionsRegistrar {
 	private final GenericApplicationContext context;
 
 	public BuildTimeBeanDefinitionsRegistrar(GenericApplicationContext context) {
+		Assert.notNull(context, "Context must not be null");
+		Assert.state(!context.isActive(), () -> "Context must not be active");
 		this.context = context;
 	}
-
-	public void register(Class<?>... componentClasses) {
-		for (Class<?> componentClass : componentClasses) {
-			this.context.registerBean(componentClass);
-		}
-	}
-
 
 	/**
 	 * Process bean definitions without creating any instance and return the
