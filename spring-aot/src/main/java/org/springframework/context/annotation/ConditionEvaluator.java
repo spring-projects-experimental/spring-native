@@ -108,8 +108,8 @@ class ConditionEvaluator {
 	}
 
 	private ConditionEvaluation evaluate(Conditions conditions, ConfigurationPhase phase) {
-		List<ConditionHolder> conditionHolders = conditions.getConditionDefinitions().stream().map((definition)
-				-> new ConditionHolder(definition, definition.newInstance(this.context.classLoader)))
+		List<ConditionHolder> conditionHolders = conditions.getConditionDefinitions().stream().map((definition) ->
+				new ConditionHolder(definition, definition.newInstance(this.context.classLoader)))
 				.filter((holder) -> holder.hasRequiredPhase(phase))
 				.sorted().collect(Collectors.toList());
 		ConditionEvaluation.Builder stateBuilder = ConditionEvaluation.forConditions(conditionHolders.stream()

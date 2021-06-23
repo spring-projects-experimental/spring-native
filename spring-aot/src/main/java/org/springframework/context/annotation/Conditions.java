@@ -56,7 +56,7 @@ final class Conditions {
 
 	/**
 	 * Create an instance based on the specified {@link AnnotatedTypeMetadata metadata}.
-	 * @param metadata the meta data
+	 * @param metadata the metadata
 	 * @return the conditions
 	 */
 	static Conditions from(@Nullable AnnotatedTypeMetadata metadata) {
