@@ -19,11 +19,18 @@ public final class BeanFactoryStructureAnalysis {
 
 	private final ConfigurableListableBeanFactory beanFactory;
 
+	private final BeanDefinitionPredicates predicates;
+
 	private final Map<BeanDefinition, BeanDefinitionOrigin> processed;
 
 	public BeanFactoryStructureAnalysis(ConfigurableListableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
+		this.predicates = new BeanDefinitionPredicates(beanFactory.getBeanClassLoader());
 		this.processed = new LinkedHashMap<>();
+	}
+
+	public BeanDefinitionPredicates getPredicates() {
+		return this.predicates;
 	}
 
 	public Stream<BeanDefinition> beanDefinitions() {

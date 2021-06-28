@@ -1,6 +1,5 @@
 package org.springframework.boot.context.properties;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -8,17 +7,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.origin.BeanDefinitionOrigin;
 import org.springframework.context.origin.BeanDefinitionOrigin.Type;
 import org.springframework.context.origin.BeanDefinitionOriginAnalyzer;
+import org.springframework.context.origin.BeanDefinitionPredicates;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
 import org.springframework.core.type.AnnotatedTypeMetadata;
-import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.classreading.MetadataReaderFactory;
-import org.springframework.core.type.classreading.SimpleMetadataReaderFactory;
-import org.springframework.lang.Nullable;
 import org.springframework.util.MultiValueMap;
 
 /**
@@ -29,21 +24,17 @@ import org.springframework.util.MultiValueMap;
  */
 public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implements BeanDefinitionOriginAnalyzer {
 
-	private static final MetadataReaderFactory metadataReaderFactory = new SimpleMetadataReaderFactory();
-
 	private static final String CONFIGURATION_PROPERTIES = "org.springframework.boot.context.properties.ConfigurationProperties";
 
 	private static final String ENABLE_CONFIGURATION_PROPERTIES = "org.springframework.boot.context.properties.EnableConfigurationProperties";
 
 	@Override
 	public void analyze(BeanFactoryStructureAnalysis analysis) {
-		analysis.unprocessed().forEach((beanDefinition) -> {
-			AnnotationMetadata annotationMetadata = getAnnotationMetadata(beanDefinition.getBeanClassName());
-			if (annotationMetadata != null && annotationMetadata.isAnnotated(CONFIGURATION_PROPERTIES)) {
-				BeanDefinitionOrigin origin = locateOrigin(analysis, beanDefinition);
-				if (origin != null) {
-					analysis.markAsProcessed(origin);
-				}
+		BeanDefinitionPredicates predicates = analysis.getPredicates();
+		analysis.unprocessed().filter(predicates.annotatedWith(CONFIGURATION_PROPERTIES)).forEach((beanDefinition) -> {
+			BeanDefinitionOrigin origin = locateOrigin(analysis, beanDefinition);
+			if (origin != null) {
+				analysis.markAsProcessed(origin);
 			}
 		});
 	}
@@ -51,7 +42,7 @@ public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implement
 	private BeanDefinitionOrigin locateOrigin(BeanFactoryStructureAnalysis analysis, BeanDefinition beanDefinition) {
 		Set<BeanDefinition> origins = new LinkedHashSet<>();
 		analysis.beanDefinitions().forEach((candidate) -> {
-			if (getConfigurationPropertiesClasses(getAnnotationMetadata(candidate))
+			if (getConfigurationPropertiesClasses(analysis.getPredicates().getAnnotationMetadata(candidate))
 					.contains(beanDefinition.getBeanClassName())) {
 				origins.add(candidate);
 			}
@@ -74,26 +65,6 @@ public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implement
 			}
 		}
 		return Collections.emptyList();
-	}
-
-	private static AnnotationMetadata getAnnotationMetadata(BeanDefinition beanDefinition) {
-		if (beanDefinition instanceof AnnotatedBeanDefinition) {
-			((AnnotatedBeanDefinition) beanDefinition).getMetadata();
-		}
-		if (beanDefinition.getBeanClassName() != null) {
-			return getAnnotationMetadata(beanDefinition.getBeanClassName());
-		}
-		return null;
-	}
-
-	@Nullable
-	private static AnnotationMetadata getAnnotationMetadata(String type) {
-		try {
-			return metadataReaderFactory.getMetadataReader(type).getAnnotationMetadata();
-		}
-		catch (IOException ex) {
-			return null;
-		}
 	}
 
 }
