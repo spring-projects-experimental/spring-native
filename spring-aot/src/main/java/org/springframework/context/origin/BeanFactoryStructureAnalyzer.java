@@ -1,12 +1,10 @@
 package org.springframework.context.origin;
 
-import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.autoconfigure.AutoConfigurationPackagesBeanDefinitionOriginAnalyzer;
-import org.springframework.boot.context.properties.ConfigurationPropertiesBeanDefinitionOriginAnalyzer;
-import org.springframework.context.annotation.CoreBeanDefinitionOriginAnalyzer;
+import org.springframework.core.io.support.SpringFactoriesLoader;
+import org.springframework.lang.Nullable;
 
 /**
  * Analyze the structure of  {@link ConfigurableListableBeanFactory bean factory}.
@@ -18,14 +16,21 @@ public class BeanFactoryStructureAnalyzer {
 
 	private final List<BeanDefinitionOriginAnalyzer> analyzers;
 
+	/**
+	 * Create an instance with the specified {@link BeanDefinitionOriginAnalyzer analyzers}.
+	 * @param analyzers the analyzers to use.
+	 */
 	public BeanFactoryStructureAnalyzer(List<BeanDefinitionOriginAnalyzer> analyzers) {
 		this.analyzers = analyzers;
 	}
 
-	public BeanFactoryStructureAnalyzer() {
-		this(Arrays.asList(new CoreBeanDefinitionOriginAnalyzer(),
-				new ConfigurationPropertiesBeanDefinitionOriginAnalyzer(),
-				new AutoConfigurationPackagesBeanDefinitionOriginAnalyzer()));
+	/**
+	 * Create an instance using all the registered {@link BeanDefinitionOriginAnalyzer analyzers}
+	 * available using the specified {@link ClassLoader}.
+	 * @param classLoader the class loader to use.
+	 */
+	public BeanFactoryStructureAnalyzer(@Nullable ClassLoader classLoader) {
+		this(SpringFactoriesLoader.loadFactories(BeanDefinitionOriginAnalyzer.class, classLoader));
 	}
 
 	/**

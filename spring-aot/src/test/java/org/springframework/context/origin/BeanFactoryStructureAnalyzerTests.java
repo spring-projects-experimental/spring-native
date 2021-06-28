@@ -15,15 +15,17 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class BeanFactoryStructureAnalyzerTests {
 
-	private final BeanFactoryStructureAnalyzer analyzer = new BeanFactoryStructureAnalyzer();
-
 	@Test
 	void analyzeSimpleStructure() {
 		GenericApplicationContext context = new GenericApplicationContext();
 		context.registerBean(ConfigurationOne.class);
-		BeanFactoryStructure structure = this.analyzer.analyze(
-				new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions());
+		BeanFactoryStructure structure = analyze(context);
 		assertThat(structure).isNotNull();
+	}
+
+	private BeanFactoryStructure analyze(GenericApplicationContext context) {
+		return new BeanFactoryStructureAnalyzer(context.getClassLoader()).analyze(
+				new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions());
 	}
 
 }

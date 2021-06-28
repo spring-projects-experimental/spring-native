@@ -1,0 +1,4 @@
+org.springframework.context.origin.BeanDefinitionOriginAnalyzer=\
+org.springframework.boot.autoconfigure.AutoConfigurationPackagesBeanDefinitionOriginAnalyzer,\
+org.springframework.boot.context.properties.ConfigurationPropertiesBeanDefinitionOriginAnalyzer,\
+org.springframework.context.annotation.CoreBeanDefinitionOriginAnalyzer
