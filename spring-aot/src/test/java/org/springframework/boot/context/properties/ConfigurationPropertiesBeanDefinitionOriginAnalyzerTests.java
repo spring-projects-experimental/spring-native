@@ -4,9 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.ConfigurationPropertiesBeanDefinitionOriginAnalyzer;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.origin.BeanDefinitionOrigin.Type;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
@@ -23,7 +20,7 @@ class ConfigurationPropertiesBeanDefinitionOriginAnalyzerTests {
 	private final ConfigurationPropertiesBeanDefinitionOriginAnalyzer analyzer = new ConfigurationPropertiesBeanDefinitionOriginAnalyzer();
 
 	@Test
-	void testConfigurationPropertiesAnnotatedTypeIsAnalyzed() {
+	void analyzeConfigurationPropertiesAnnotatedType() {
 		DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 		beanFactory.registerBeanDefinition("configuration", new RootBeanDefinition(SampleConfiguration.class));
 		beanFactory.registerBeanDefinition("configurationProperties", new RootBeanDefinition(SampleProperties.class));

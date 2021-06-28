@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.autoconfigure.AutoConfigurationPackagesBeanDefinitionOriginAnalyzer;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBeanDefinitionOriginAnalyzer;
 import org.springframework.context.annotation.CoreBeanDefinitionOriginAnalyzer;
 
@@ -23,7 +24,8 @@ public class BeanFactoryStructureAnalyzer {
 
 	public BeanFactoryStructureAnalyzer() {
 		this(Arrays.asList(new CoreBeanDefinitionOriginAnalyzer(),
-				new ConfigurationPropertiesBeanDefinitionOriginAnalyzer()));
+				new ConfigurationPropertiesBeanDefinitionOriginAnalyzer(),
+				new AutoConfigurationPackagesBeanDefinitionOriginAnalyzer()));
 	}
 
 	/**
