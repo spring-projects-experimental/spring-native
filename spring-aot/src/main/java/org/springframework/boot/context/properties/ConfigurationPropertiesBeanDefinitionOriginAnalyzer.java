@@ -1,4 +1,4 @@
-package org.springframework.boot.context.origin;
+package org.springframework.boot.context.properties;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,10 +50,10 @@ public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implement
 
 	private BeanDefinitionOrigin locateOrigin(BeanFactoryStructureAnalysis analysis, BeanDefinition beanDefinition) {
 		Set<BeanDefinition> origins = new LinkedHashSet<>();
-		analysis.beanDefinitions(AnnotatedBeanDefinition.class).forEach((candidate) -> {
-			if (getConfigurationPropertiesClasses(candidate.getMetadata())
+		analysis.beanDefinitions().forEach((candidate) -> {
+			if (getConfigurationPropertiesClasses(getAnnotationMetadata(candidate))
 					.contains(beanDefinition.getBeanClassName())) {
-				origins.add(beanDefinition);
+				origins.add(candidate);
 			}
 		});
 		return (!origins.isEmpty()) ? new BeanDefinitionOrigin(beanDefinition, Type.COMPONENT, origins) : null;
@@ -61,17 +61,29 @@ public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implement
 
 	@SuppressWarnings("unchecked")
 	private List<String> getConfigurationPropertiesClasses(AnnotatedTypeMetadata metadata) {
-		MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(ENABLE_CONFIGURATION_PROPERTIES, true);
-		Object values = (attributes != null ? attributes.get("value") : null);
-		if (values != null) {
-			List<String[]> arrayValues = (List<String[]>) values;
-			List<String> result = new ArrayList<>();
-			for (String[] arrayValue : arrayValues) {
-				result.addAll(Arrays.asList(arrayValue));
+		if (metadata != null) {
+			MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(ENABLE_CONFIGURATION_PROPERTIES, true);
+			Object values = (attributes != null ? attributes.get("value") : null);
+			if (values != null) {
+				List<String[]> arrayValues = (List<String[]>) values;
+				List<String> result = new ArrayList<>();
+				for (String[] arrayValue : arrayValues) {
+					result.addAll(Arrays.asList(arrayValue));
+				}
+				return result;
 			}
-			return result;
 		}
 		return Collections.emptyList();
+	}
+
+	private static AnnotationMetadata getAnnotationMetadata(BeanDefinition beanDefinition) {
+		if (beanDefinition instanceof AnnotatedBeanDefinition) {
+			((AnnotatedBeanDefinition) beanDefinition).getMetadata();
+		}
+		if (beanDefinition.getBeanClassName() != null) {
+			return getAnnotationMetadata(beanDefinition.getBeanClassName());
+		}
+		return null;
 	}
 
 	@Nullable

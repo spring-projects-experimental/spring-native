@@ -21,7 +21,7 @@ public final class BeanFactoryStructureAnalysis {
 
 	private final Map<BeanDefinition, BeanDefinitionOrigin> processed;
 
-	BeanFactoryStructureAnalysis(ConfigurableListableBeanFactory beanFactory) {
+	public BeanFactoryStructureAnalysis(ConfigurableListableBeanFactory beanFactory) {
 		this.beanFactory = beanFactory;
 		this.processed = new LinkedHashMap<>();
 	}
