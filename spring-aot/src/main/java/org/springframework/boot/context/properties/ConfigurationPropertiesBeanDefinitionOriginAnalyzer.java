@@ -28,6 +28,18 @@ public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implement
 
 	private static final String ENABLE_CONFIGURATION_PROPERTIES = "org.springframework.boot.context.properties.EnableConfigurationProperties";
 
+	private static final String CONFIGURATION_PROPERTIES_AUTO_CONFIGURATION = "org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration";
+
+	private static final String CONFIGURATION_PROPERTIES_BINDING_POST_PROCESSOR = "org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor";
+
+	private static final String METHOD_VALIDATION_EXCLUDE_FILTER = "org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter";
+
+	private static final String BOUND_CONFIGURATION_PROPERTIES = "org.springframework.boot.context.properties.BoundConfigurationProperties";
+
+	private static final String CONFIGURATION_PROPERTIES_BINDER_FACTORY = "org.springframework.boot.context.properties.ConfigurationPropertiesBinder$Factory";
+
+	private static final String CONFIGURATION_PROPERTIES_BINDER = "org.springframework.boot.context.properties.ConfigurationPropertiesBinder";
+
 	@Override
 	public void analyze(BeanFactoryStructureAnalysis analysis) {
 		BeanDefinitionPredicates predicates = analysis.getPredicates();
@@ -37,6 +49,15 @@ public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implement
 				analysis.markAsProcessed(origin);
 			}
 		});
+		// See EnableConfigurationPropertiesRegistrar - let's bind that to the auto-configuration
+		analysis.beanDefinitions().filter(predicates
+				.ofBeanClassName(CONFIGURATION_PROPERTIES_AUTO_CONFIGURATION)).findFirst().ifPresent((parent) ->
+				analysis.unprocessed().filter(predicates.ofBeanClassName(CONFIGURATION_PROPERTIES_BINDING_POST_PROCESSOR)
+						.or(predicates.ofBeanClassName(METHOD_VALIDATION_EXCLUDE_FILTER).or(predicates.ofBeanClassName(BOUND_CONFIGURATION_PROPERTIES)
+								.or(predicates.ofBeanClassName(CONFIGURATION_PROPERTIES_BINDER_FACTORY)
+										.or(predicates.ofBeanClassName(CONFIGURATION_PROPERTIES_BINDER))))))
+						.forEach((beanDefinition) -> analysis.markAsProcessed(
+								new BeanDefinitionOrigin(beanDefinition, Type.COMPONENT, Collections.singleton(parent)))));
 	}
 
 	private BeanDefinitionOrigin locateOrigin(BeanFactoryStructureAnalysis analysis, BeanDefinition beanDefinition) {

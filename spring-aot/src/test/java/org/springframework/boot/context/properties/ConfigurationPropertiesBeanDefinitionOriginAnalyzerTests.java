@@ -1,12 +1,21 @@
 package org.springframework.boot.context.properties;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.junit.jupiter.api.Test;
 
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
+import org.springframework.context.annotation.BuildTimeBeanDefinitionsRegistrar;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.origin.BeanDefinitionOrigin;
 import org.springframework.context.origin.BeanDefinitionOrigin.Type;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
+import org.springframework.context.support.GenericApplicationContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,6 +42,20 @@ class ConfigurationPropertiesBeanDefinitionOriginAnalyzerTests {
 		});
 	}
 
+	@Test
+	void analyzeConfigurationPropertiesInfrastructure() {
+		GenericApplicationContext context = new GenericApplicationContext();
+		context.registerBean(SampleAutoConfiguration.class);
+		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
+		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(registrar.processBeanDefinitions());
+		this.analyzer.analyze(analysis);
+		assertThat(analysis.processed()).hasSize(5);
+		HashSet<BeanDefinition> parents = analysis.processed().map(BeanDefinitionOrigin::getOrigins)
+				.collect(HashSet::new, Set::addAll, Set::addAll);
+		assertThat(parents).singleElement().satisfies((parent) -> assertThat(parent.getBeanClassName())
+				.isEqualTo(ConfigurationPropertiesAutoConfiguration.class.getName()));
+	}
+
 
 	@Configuration(proxyBeanMethods = false)
 	@EnableConfigurationProperties(SampleProperties.class)
@@ -42,6 +65,12 @@ class ConfigurationPropertiesBeanDefinitionOriginAnalyzerTests {
 
 	@ConfigurationProperties("sample")
 	static class SampleProperties {
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	@ImportAutoConfiguration(ConfigurationPropertiesAutoConfiguration.class)
+	static class SampleAutoConfiguration {
 
 	}
 
