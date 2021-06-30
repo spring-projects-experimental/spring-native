@@ -1,5 +1,6 @@
 org.springframework.context.origin.BeanDefinitionOriginAnalyzer=\
 org.springframework.boot.autoconfigure.AutoConfigurationPackagesBeanDefinitionOriginAnalyzer,\
 org.springframework.boot.context.properties.ConfigurationPropertiesBeanDefinitionOriginAnalyzer,\
+org.springframework.boot.sql.init.dependency.DatabaseInitializationDependencyBeanDefinitionOriginAnalyzer,\
 org.springframework.boot.web.server.WebServerFactoryAutoConfigurationBeanDefinitionOriginAnalyzer,\
 org.springframework.context.annotation.CoreBeanDefinitionOriginAnalyzer

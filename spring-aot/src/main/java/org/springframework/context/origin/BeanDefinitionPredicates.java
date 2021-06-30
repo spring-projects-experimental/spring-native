@@ -32,11 +32,15 @@ public class BeanDefinitionPredicates {
 		return ofBeanClassName(type.getName());
 	}
 
-	public Predicate<BeanDefinition> annotatedWith(String annotationName) {
+	public Predicate<BeanDefinition> annotationMatching(Predicate<AnnotationMetadata> annotationState) {
 		return (candidate) -> {
 			AnnotationMetadata metadata = getAnnotationMetadata(candidate);
-			return (metadata != null && metadata.isAnnotated(annotationName));
+			return (metadata != null && annotationState.test(metadata));
 		};
+	}
+
+	public Predicate<BeanDefinition> annotatedWith(String annotationName) {
+		return annotationMatching((metadata) -> metadata.isAnnotated(annotationName));
 	}
 
 	public Predicate<BeanDefinition> annotatedWith(Class<? extends Annotation> annotationType) {
