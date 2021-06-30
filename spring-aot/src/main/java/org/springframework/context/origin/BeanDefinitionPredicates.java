@@ -1,6 +1,7 @@
 package org.springframework.context.origin;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.util.function.Predicate;
 
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
@@ -27,11 +28,19 @@ public class BeanDefinitionPredicates {
 		return (candidate) -> className.equals(candidate.getBeanClassName());
 	}
 
+	public Predicate<BeanDefinition> ofBeanClassName(Class<?> type) {
+		return ofBeanClassName(type.getName());
+	}
+
 	public Predicate<BeanDefinition> annotatedWith(String annotationName) {
 		return (candidate) -> {
 			AnnotationMetadata metadata = getAnnotationMetadata(candidate);
 			return (metadata != null && metadata.isAnnotated(annotationName));
 		};
+	}
+
+	public Predicate<BeanDefinition> annotatedWith(Class<? extends Annotation> annotationType) {
+		return annotatedWith(annotationType.getName());
 	}
 
 	public AnnotationMetadata getAnnotationMetadata(BeanDefinition beanDefinition) {

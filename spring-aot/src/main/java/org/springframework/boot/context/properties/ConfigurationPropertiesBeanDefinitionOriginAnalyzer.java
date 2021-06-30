@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
+import org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter;
 import org.springframework.context.origin.BeanDefinitionOrigin;
 import org.springframework.context.origin.BeanDefinitionOrigin.Type;
 import org.springframework.context.origin.BeanDefinitionOriginAnalyzer;
@@ -24,26 +26,10 @@ import org.springframework.util.MultiValueMap;
  */
 public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implements BeanDefinitionOriginAnalyzer {
 
-	private static final String CONFIGURATION_PROPERTIES = "org.springframework.boot.context.properties.ConfigurationProperties";
-
-	private static final String ENABLE_CONFIGURATION_PROPERTIES = "org.springframework.boot.context.properties.EnableConfigurationProperties";
-
-	private static final String CONFIGURATION_PROPERTIES_AUTO_CONFIGURATION = "org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration";
-
-	private static final String CONFIGURATION_PROPERTIES_BINDING_POST_PROCESSOR = "org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor";
-
-	private static final String METHOD_VALIDATION_EXCLUDE_FILTER = "org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter";
-
-	private static final String BOUND_CONFIGURATION_PROPERTIES = "org.springframework.boot.context.properties.BoundConfigurationProperties";
-
-	private static final String CONFIGURATION_PROPERTIES_BINDER_FACTORY = "org.springframework.boot.context.properties.ConfigurationPropertiesBinder$Factory";
-
-	private static final String CONFIGURATION_PROPERTIES_BINDER = "org.springframework.boot.context.properties.ConfigurationPropertiesBinder";
-
 	@Override
 	public void analyze(BeanFactoryStructureAnalysis analysis) {
 		BeanDefinitionPredicates predicates = analysis.getPredicates();
-		analysis.unprocessed().filter(predicates.annotatedWith(CONFIGURATION_PROPERTIES)).forEach((beanDefinition) -> {
+		analysis.unprocessed().filter(predicates.annotatedWith(ConfigurationProperties.class.getName())).forEach((beanDefinition) -> {
 			BeanDefinitionOrigin origin = locateOrigin(analysis, beanDefinition);
 			if (origin != null) {
 				analysis.markAsProcessed(origin);
@@ -51,11 +37,11 @@ public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implement
 		});
 		// See EnableConfigurationPropertiesRegistrar - let's bind that to the auto-configuration
 		analysis.beanDefinitions().filter(predicates
-				.ofBeanClassName(CONFIGURATION_PROPERTIES_AUTO_CONFIGURATION)).findFirst().ifPresent((parent) ->
-				analysis.unprocessed().filter(predicates.ofBeanClassName(CONFIGURATION_PROPERTIES_BINDING_POST_PROCESSOR)
-						.or(predicates.ofBeanClassName(METHOD_VALIDATION_EXCLUDE_FILTER).or(predicates.ofBeanClassName(BOUND_CONFIGURATION_PROPERTIES)
-								.or(predicates.ofBeanClassName(CONFIGURATION_PROPERTIES_BINDER_FACTORY)
-										.or(predicates.ofBeanClassName(CONFIGURATION_PROPERTIES_BINDER))))))
+				.ofBeanClassName(ConfigurationPropertiesAutoConfiguration.class.getName())).findFirst().ifPresent((parent) ->
+				analysis.unprocessed().filter(predicates.ofBeanClassName(ConfigurationPropertiesBindingPostProcessor.class)
+						.or(predicates.ofBeanClassName(MethodValidationExcludeFilter.class).or(predicates.ofBeanClassName(BoundConfigurationProperties.class)
+								.or(predicates.ofBeanClassName(ConfigurationPropertiesBinder.Factory.class.getName())
+										.or(predicates.ofBeanClassName(ConfigurationPropertiesBinder.class.getName()))))))
 						.forEach((beanDefinition) -> analysis.markAsProcessed(
 								new BeanDefinitionOrigin(beanDefinition, Type.COMPONENT, Collections.singleton(parent)))));
 	}
@@ -74,7 +60,7 @@ public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implement
 	@SuppressWarnings("unchecked")
 	private List<String> getConfigurationPropertiesClasses(AnnotatedTypeMetadata metadata) {
 		if (metadata != null) {
-			MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(ENABLE_CONFIGURATION_PROPERTIES, true);
+			MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(EnableConfigurationProperties.class.getName(), true);
 			Object values = (attributes != null ? attributes.get("value") : null);
 			if (values != null) {
 				List<String[]> arrayValues = (List<String[]>) values;
