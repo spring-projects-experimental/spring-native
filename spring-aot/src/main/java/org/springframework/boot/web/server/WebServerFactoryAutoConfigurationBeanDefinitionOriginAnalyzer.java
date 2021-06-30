@@ -9,14 +9,12 @@ import org.springframework.context.origin.BeanDefinitionOrigin.Type;
 import org.springframework.context.origin.BeanDefinitionOriginAnalyzer;
 import org.springframework.context.origin.BeanDefinitionPredicates;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
-import org.springframework.core.annotation.Order;
 
 /**
  * A {@link BeanDefinitionOriginAnalyzer} for Spring Boot's web server support.
  *
  * @author Stephane Nicoll
  */
-@Order(0)
 class WebServerFactoryAutoConfigurationBeanDefinitionOriginAnalyzer implements BeanDefinitionOriginAnalyzer {
 
 	@Override
