@@ -1,3 +1,8 @@
+org.springframework.context.bootstrap.generator.bean.BeanValueWriterSupplier=\
+org.springframework.boot.autoconfigure.AutoConfigurationPackagesBeanValueWriterSupplier,\
+org.springframework.boot.autoconfigure.context.properties.ConfigurationPropertiesBeanValueWriterSupplier,\
+org.springframework.context.bootstrap.generator.bean.DefaultBeanValueWriterSupplier
+
 org.springframework.context.origin.BeanDefinitionOriginAnalyzer=\
 org.springframework.boot.autoconfigure.AutoConfigurationPackagesBeanDefinitionOriginAnalyzer,\
 org.springframework.boot.context.properties.ConfigurationPropertiesBeanDefinitionOriginAnalyzer,\
