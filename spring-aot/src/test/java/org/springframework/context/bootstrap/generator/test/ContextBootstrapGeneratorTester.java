@@ -16,6 +16,7 @@
 
 package org.springframework.context.bootstrap.generator.test;
 
+import java.beans.Introspector;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,8 +26,11 @@ import java.util.List;
 
 import com.squareup.javapoet.JavaFile;
 
-import org.springframework.boot.test.context.runner.AbstractApplicationContextRunner;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.BuildTimeBeanDefinitionsRegistrar;
 import org.springframework.context.bootstrap.generator.ContextBootstrapGenerator;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -64,15 +68,24 @@ public class ContextBootstrapGeneratorTester {
 		return new ContextBootstrapGeneratorTester(this.directory, this.packageName, Arrays.asList(excludeTypes));
 	}
 
-	public ContextBootstrapStructure generate(AbstractApplicationContextRunner<?, ?, ?> runner) {
+	public ContextBootstrapStructure generate(Class<?>... candidates) {
+		GenericApplicationContext context = new GenericApplicationContext();
+		for (Class<?> candidate : candidates) {
+			context.registerBean(generateShortName(candidate), candidate);
+		}
+		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
+		ConfigurableListableBeanFactory beanFactory = registrar.processBeanDefinitions();
 		Path srcDirectory = generateSrcDirectory();
-		runner.run((context) -> {
-			List<JavaFile> javaFiles = new ContextBootstrapGenerator(context.getClassLoader()).generateBootstrapClass(
-					context.getSourceApplicationContext().getBeanFactory(), this.packageName,
-					this.excludeTypes.toArray(new Class<?>[0]));
-			writeSources(srcDirectory, javaFiles);
-		});
+		List<JavaFile> javaFiles = new ContextBootstrapGenerator(context.getClassLoader()).generateBootstrapClass(
+				beanFactory, this.packageName,
+				this.excludeTypes.toArray(new Class<?>[0]));
+		writeSources(srcDirectory, javaFiles);
 		return new ContextBootstrapStructure(srcDirectory, this.packageName);
+	}
+
+	private String generateShortName(Class<?> target) {
+		String shortClassName = ClassUtils.getShortName(target);
+		return Introspector.decapitalize(shortClassName);
 	}
 
 	private Path generateSrcDirectory() {
