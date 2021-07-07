@@ -16,6 +16,9 @@
 
 package org.springframework.context.annotation;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.util.Assert;
@@ -28,6 +31,8 @@ import org.springframework.util.Assert;
  * @see ConditionEvaluationStateReport
  */
 public class BuildTimeBeanDefinitionsRegistrar {
+
+	private static final Log logger = LogFactory.getLog(BuildTimeBeanDefinitionsRegistrar.class);
 
 	private final GenericApplicationContext context;
 
@@ -43,8 +48,18 @@ public class BuildTimeBeanDefinitionsRegistrar {
 	 * @return the bean factory with the result of the processing
 	 */
 	public ConfigurableListableBeanFactory processBeanDefinitions() {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Parsing configuration classes");
+		}
 		parseConfigurationClasses();
-		return this.context.getBeanFactory();
+		ConfigurableListableBeanFactory beanFactory = this.context.getBeanFactory();
+		if (logger.isDebugEnabled()) {
+			logger.debug("Resolving types for " + beanFactory.getBeanDefinitionCount() + " bean definitions");
+		}
+		for (String beanDefinitionName : beanFactory.getBeanDefinitionNames()) {
+			beanFactory.getType(beanDefinitionName);
+		}
+		return beanFactory;
 	}
 
 	private void parseConfigurationClasses() {
