@@ -16,7 +16,9 @@
 
 package org.springframework.aot;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,6 +30,9 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.springframework.aot.context.bootstrap.ContextBootstrapContributor;
+import org.springframework.boot.loader.tools.MainClassFinder;
 import org.springframework.nativex.AotOptions;
 import org.springframework.nativex.domain.proxies.ProxiesDescriptor;
 import org.springframework.nativex.domain.proxies.ProxiesDescriptorJsonMarshaller;
@@ -37,6 +42,7 @@ import org.springframework.nativex.domain.resources.ResourcesDescriptor;
 import org.springframework.nativex.domain.resources.ResourcesJsonMarshaller;
 import org.springframework.nativex.domain.serialization.SerializationDescriptor;
 import org.springframework.nativex.domain.serialization.SerializationDescriptorJsonMarshaller;
+import org.springframework.nativex.support.Mode;
 
 /**
  * Generate code for bootstrapping Spring applications in a GraalVM native environment.
@@ -57,22 +63,43 @@ public class BootstrapCodeGenerator {
 		this.aotOptions = aotOptions;
 	}
 
+	public void generate(Path sourcesPath, Path resourcesPath, List<String> classpath, Set<Path> resourceFolders) throws IOException {
+		logger.debug("Starting code generation with classpath: " + classpath);
+		File classesFolder = Paths.get(classpath.get(0)).toFile();
+		String singleMainClass = MainClassFinder.findSingleMainClass(classesFolder);
+		DefaultBuildContext buildContext = new DefaultBuildContext(singleMainClass, classpath);
+		generate(sourcesPath, resourcesPath, buildContext, resourceFolders);
+	}
+
+	public void generate(Path sourcesPath, Path resourcesPath, URLClassLoader classLoader, Set<Path> resourceFolders) throws IOException {
+		logger.debug("Starting code generation with classLoader: " + classLoader);
+		File classesFolder = Paths.get(classLoader.getURLs()[0].getFile()).toFile();
+		String singleMainClass = MainClassFinder.findSingleMainClass(classesFolder);
+		DefaultBuildContext buildContext = new DefaultBuildContext(singleMainClass, classLoader);
+		generate(sourcesPath, resourcesPath, buildContext, resourceFolders);
+	}
+
 	/**
 	 * Generate bootstrap code for the application.
 	 *
 	 * @param sourcesPath the root path generated source files should be written to
 	 * @param resourcesPath the root path generated resource files should be written to
-	 * @param classpath the "compile+runtime" classpath of the application
+	 * @param buildContext the build context for this application
 	 * @param resourceFolders paths to folders containing project main resources
 	 * @throws IOException if an I/O error is thrown when opening the resource folders
 	 */
-	public void generate(Path sourcesPath, Path resourcesPath, List<String> classpath, Set<Path> resourceFolders) throws IOException {
-		logger.debug("Starting code generation with classpath: " + classpath);
-		DefaultBuildContext buildContext = new DefaultBuildContext(classpath);
-		ServiceLoader<BootstrapContributor> contributors = ServiceLoader.load(BootstrapContributor.class);
-		for (BootstrapContributor contributor : contributors) {
-			logger.debug("Executing Contributor: " + contributor.getClass().getName());
-			contributor.contribute(buildContext, this.aotOptions);
+	private void generate(Path sourcesPath, Path resourcesPath, DefaultBuildContext buildContext, Set<Path> resourceFolders) throws IOException {
+		if (this.aotOptions.toMode().equals(Mode.NATIVE_NEXT)) {
+			ContextBootstrapContributor bootstrapContributor = new ContextBootstrapContributor();
+			logger.debug("Executing Contributor: " + bootstrapContributor.getClass().getName());
+			bootstrapContributor.contribute(buildContext, this.aotOptions);
+		}
+		else {
+			ServiceLoader<BootstrapContributor> contributors = ServiceLoader.load(BootstrapContributor.class);
+			for (BootstrapContributor contributor : contributors) {
+				logger.debug("Executing Contributor: " + contributor.getClass().getName());
+				contributor.contribute(buildContext, this.aotOptions);
+			}
 		}
 
 		buildResourcePatternCache(buildContext.getResourcesDescriptor());

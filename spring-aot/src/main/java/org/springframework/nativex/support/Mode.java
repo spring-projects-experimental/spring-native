@@ -31,6 +31,11 @@ public enum Mode {
 	NATIVE,
 
 	/**
+	 * New native mode, relying on partial context init at build time.
+	 */
+	NATIVE_NEXT,
+
+	/**
 	 * Initialization-only configuration provided by Spring Native.
 	 */
 	NATIVE_INIT,

@@ -43,7 +43,7 @@
 				<artifactId>@project.artifactId@</artifactId>
 				<version>@project.version@</version>
 				<configuration>
-					<mode>native</mode>
+					<mode>native-next</mode>
 					<debugVerify>true</debugVerify>
 					<ignoreHintsOnExcludedConfig>true</ignoreHintsOnExcludedConfig>
 					<removeUnusedConfig>true</removeUnusedConfig>
@@ -59,6 +59,7 @@
 					</buildTimePropertiesChecks>
 				</configuration>
 				<executions>
+					<!--
 					<execution>
 						<id>test-generate</id>
 						<phase>process-test-classes</phase>
@@ -66,6 +67,7 @@
 							<goal>test-generate</goal>
 						</goals>
 					</execution>
+					-->
 					<execution>
 						<id>generate</id>
 						<phase>prepare-package</phase>

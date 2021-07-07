@@ -42,6 +42,11 @@ public interface BuildContext {
 	TypeSystem getTypeSystem();
 
 	/**
+	 * @return the main class of the application to build.
+	 */
+	String getMainClass();
+
+	/**
 	 * Contribute source files to the application.
 	 * <p>This additional source code will be compiled and packaged with the application by a build plugin.
 	 * @param sourceFile the source files to add

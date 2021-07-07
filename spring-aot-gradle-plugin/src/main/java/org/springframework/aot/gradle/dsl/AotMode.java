@@ -27,6 +27,11 @@ public enum AotMode {
 	NATIVE("native"),
 
 	/**
+	 * Experimental mode relying on build-time processing of the bean factory.
+ 	 */
+	NATIVE_NEXT("native-next"),
+
+	/**
 	 *  should be used if only wishing to provide initialization configuration and substitutions.
 	 */
 	NATIVE_INIT("native-init"),

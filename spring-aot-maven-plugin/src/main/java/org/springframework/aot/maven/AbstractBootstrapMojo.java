@@ -19,14 +19,12 @@ package org.springframework.aot.maven;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
-import org.apache.maven.model.Resource;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -34,31 +32,21 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.apache.maven.toolchain.Toolchain;
+import org.apache.maven.toolchain.ToolchainManager;
 import org.sonatype.plexus.build.incremental.BuildContext;
-import org.twdata.maven.mojoexecutor.MojoExecutor;
 
+import org.springframework.boot.loader.tools.JavaExecutable;
+import org.springframework.boot.loader.tools.RunProcess;
 import org.springframework.nativex.AotOptions;
 import org.springframework.util.FileSystemUtils;
-
-import static org.twdata.maven.mojoexecutor.MojoExecutor.artifactId;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.configuration;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.element;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.executeMojo;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.goal;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.groupId;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.plugin;
-import static org.twdata.maven.mojoexecutor.MojoExecutor.version;
 
 /**
  * @author Brian Clozel
  */
 abstract class AbstractBootstrapMojo extends AbstractMojo {
 
-	private static final String DEFAULT_COMPILER_PLUGIN_VERSION = "3.8.1";
-
-	protected static Log logger = LogFactory.getLog(AbstractBootstrapMojo.class);
+	static final String DEFAULT_COMPILER_PLUGIN_VERSION = "3.8.1";
 
 	@Parameter(defaultValue = "${project}", readonly = true, required = true)
 	protected MavenProject project;
@@ -71,6 +59,12 @@ abstract class AbstractBootstrapMojo extends AbstractMojo {
 
 	@Component
 	protected BuildPluginManager pluginManager;
+
+	@Parameter(defaultValue = "${plugin.artifacts}")
+	protected List<Artifact> pluginArtifacts;
+
+	@Component
+	private ToolchainManager toolchainManager;
 
 	@Parameter(defaultValue = "${project.build.directory}")
 	protected File buildDir;
@@ -129,6 +123,32 @@ abstract class AbstractBootstrapMojo extends AbstractMojo {
 		return aotOptions;
 	}
 
+	protected String getSpringNativeConfigurationJarPath() throws MojoFailureException {
+		return this.pluginArtifacts.stream()
+				.filter(artifact -> artifact.getGroupId().equals("org.springframework.experimental") && artifact.getArtifactId().equals("spring-native-configuration"))
+				.map(artifact -> artifact.getFile().getAbsolutePath())
+				.findFirst()
+				.orElseThrow(() -> new MojoFailureException("Could not find spring-native-configuration dependency in plugin classpath."));
+	}
+
+	public static String asClasspathArgument(List<String> elements) {
+		StringBuilder classpath = new StringBuilder();
+		for (String element : elements) {
+			if (classpath.length() > 0) {
+				classpath.append(File.pathSeparator);
+			}
+			classpath.append(element);
+		}
+		return classpath.toString();
+	}
+
+	public static Optional<Artifact> findJarFile(List<Artifact> artifacts, String groupId, String artifactId) {
+		return artifacts.stream()
+				.filter(artifact -> artifact.getGroupId().equals(groupId)
+						&& artifact.getArtifactId().equals(artifactId))
+				.findFirst();
+	}
+
 	protected void recreateGeneratedSourcesFolder(File generatedSourcesFolder) throws MojoFailureException {
 		try {
 			FileSystemUtils.deleteRecursively(generatedSourcesFolder);
@@ -139,54 +159,41 @@ abstract class AbstractBootstrapMojo extends AbstractMojo {
 		}
 	}
 
-	protected void compileGeneratedSources(Path sourcesPath, List<String> runtimeClasspathElements) throws MojoExecutionException {
-		String compilerVersion = this.project.getProperties().getProperty("maven-compiler-plugin.version", DEFAULT_COMPILER_PLUGIN_VERSION);
-		project.addCompileSourceRoot(sourcesPath.toString());
-		Xpp3Dom compilerConfig = configuration(
-				element("compileSourceRoots", element("compileSourceRoot", sourcesPath.toString())),
-				element("compilePath", runtimeClasspathElements.stream()
-						.map(classpathElement -> element("compilePath", classpathElement)).toArray(MojoExecutor.Element[]::new))
-		);
-		executeMojo(
-				plugin(groupId("org.apache.maven.plugins"), artifactId("maven-compiler-plugin"), version(compilerVersion)),
-				goal("compile"), compilerConfig, executionEnvironment(this.project, this.session, this.pluginManager));
+	protected void forkJvm(File workingDirectory, List<String> args, Map<String, String> environmentVariables)
+			throws MojoExecutionException {
+		try {
+			RunProcess runProcess = new RunProcess(workingDirectory, getJavaExecutable());
+			Runtime.getRuntime().addShutdownHook(new Thread(new RunProcessKiller(runProcess)));
+			int exitCode = runProcess.run(true, args, environmentVariables);
+			if (exitCode == 0 || exitCode == 130) {
+				return;
+			}
+			throw new MojoExecutionException("Application finished with exit code: " + exitCode);
+		}
+		catch (Exception ex) {
+			throw new MojoExecutionException("Could not exec java", ex);
+		}
 	}
 
-	protected void compileGeneratedTestSources(Path sourcesPath, List<String> testClasspathElements) throws MojoExecutionException {
-		String compilerVersion = this.project.getProperties().getProperty("maven-compiler-plugin.version", DEFAULT_COMPILER_PLUGIN_VERSION);
-		project.addTestCompileSourceRoot(sourcesPath.toString());
-		Xpp3Dom compilerConfig = configuration(
-				element("compileSourceRoots", element("compileSourceRoot", sourcesPath.toString())),
-				element("compilePath", testClasspathElements.stream()
-						.map(classpathElement -> element("compilePath", classpathElement)).toArray(MojoExecutor.Element[]::new))
-		);
-		executeMojo(
-				plugin(groupId("org.apache.maven.plugins"), artifactId("maven-compiler-plugin"), version(compilerVersion)),
-				goal("testCompile"), compilerConfig, executionEnvironment(this.project, this.session, this.pluginManager));
+	protected String getJavaExecutable() {
+		Toolchain toolchain = this.toolchainManager.getToolchainFromBuildContext("jdk", this.session);
+		String javaExecutable = (toolchain != null) ? toolchain.findTool("java") : null;
+		return (javaExecutable != null) ? javaExecutable : new JavaExecutable().toString();
 	}
+	
+	protected static final class RunProcessKiller implements Runnable {
 
-	protected void processGeneratedResources(Path sourcePath, Path destinationPath) throws MojoExecutionException {
-		String resourcesVersion = this.project.getProperties().getProperty("maven-resources-plugin.version", "3.2.0");
-		Xpp3Dom resourceConfig = configuration(element("resources", element("resource", element("directory", sourcePath.toString()))),
-				element("outputDirectory", destinationPath.toString()));
-		Resource resource = new Resource();
-		resource.setDirectory(sourcePath.toString());
-		project.addResource(resource);
-		executeMojo(
-				plugin(groupId("org.apache.maven.plugins"), artifactId("maven-resources-plugin"), version(resourcesVersion)),
-				goal("copy-resources"), resourceConfig, executionEnvironment(this.project, this.session, this.pluginManager));
-	}
+		private final RunProcess runProcess;
 
-	protected void processGeneratedTestResources(Path sourcePath, Path destinationPath) throws MojoExecutionException {
-		String resourcesVersion = this.project.getProperties().getProperty("maven-resources-plugin.version", "3.2.0");
-		Xpp3Dom resourceConfig = configuration(element("resources", element("resource", element("directory", sourcePath.toString()))),
-				element("outputDirectory", destinationPath.toString()));
-		Resource resource = new Resource();
-		resource.setDirectory(sourcePath.toString());
-		project.addTestResource(resource);
-		executeMojo(
-				plugin(groupId("org.apache.maven.plugins"), artifactId("maven-resources-plugin"), version(resourcesVersion)),
-				goal("copy-resources"), resourceConfig, executionEnvironment(this.project, this.session, this.pluginManager));
+		RunProcessKiller(RunProcess runProcess) {
+			this.runProcess = runProcess;
+		}
+
+		@Override
+		public void run() {
+			this.runProcess.kill();
+		}
+
 	}
 
 }

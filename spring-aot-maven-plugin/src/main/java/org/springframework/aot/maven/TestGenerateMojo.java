@@ -31,8 +31,20 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.twdata.maven.mojoexecutor.MojoExecutor;
 
 import org.springframework.aot.BootstrapCodeGenerator;
+
+import static org.twdata.maven.mojoexecutor.MojoExecutor.artifactId;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.configuration;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.element;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.executeMojo;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.executionEnvironment;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.goal;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.groupId;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.plugin;
+import static org.twdata.maven.mojoexecutor.MojoExecutor.version;
 
 /**
  * @author Brian Clozel
@@ -68,10 +80,37 @@ public class TestGenerateMojo extends AbstractBootstrapMojo {
 			this.buildContext.refresh(this.buildDir);
 		}
 		catch (Throwable exc) {
-			logger.error(exc);
-			logger.error(Arrays.toString(exc.getStackTrace()));
+			getLog().error(exc);
+			getLog().error(Arrays.toString(exc.getStackTrace()));
 			throw new MojoFailureException("Build failed during Spring AOT test code generation", exc);
 		}
 	}
 
+	protected void compileGeneratedTestSources(Path sourcesPath, List<String> testClasspathElements) throws MojoExecutionException {
+		String compilerVersion = this.project.getProperties().getProperty("maven-compiler-plugin.version", DEFAULT_COMPILER_PLUGIN_VERSION);
+		project.addTestCompileSourceRoot(sourcesPath.toString());
+		Xpp3Dom compilerConfig = configuration(
+				element("compileSourceRoots", element("compileSourceRoot", sourcesPath.toString())),
+				element("compilePath", testClasspathElements.stream()
+						.map(classpathElement -> element("compilePath", classpathElement)).toArray(MojoExecutor.Element[]::new))
+		);
+		executeMojo(
+				plugin(groupId("org.apache.maven.plugins"), artifactId("maven-compiler-plugin"), version(compilerVersion)),
+				goal("testCompile"), compilerConfig, executionEnvironment(this.project, this.session, this.pluginManager));
+	}
+
+
+
+	protected void processGeneratedTestResources(Path sourcePath, Path destinationPath) throws MojoExecutionException {
+		String resourcesVersion = this.project.getProperties().getProperty("maven-resources-plugin.version", "3.2.0");
+		Xpp3Dom resourceConfig = configuration(element("resources", element("resource", element("directory", sourcePath.toString()))),
+				element("outputDirectory", destinationPath.toString()));
+		Resource resource = new Resource();
+		resource.setDirectory(sourcePath.toString());
+		project.addTestResource(resource);
+		executeMojo(
+				plugin(groupId("org.apache.maven.plugins"), artifactId("maven-resources-plugin"), version(resourcesVersion)),
+				goal("copy-resources"), resourceConfig, executionEnvironment(this.project, this.session, this.pluginManager));
+	}
+	
 }
