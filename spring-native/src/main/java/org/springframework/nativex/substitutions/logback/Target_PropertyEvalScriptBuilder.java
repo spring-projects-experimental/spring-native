@@ -23,6 +23,7 @@ import ch.qos.logback.core.spi.PropertyContainer;
 import com.oracle.svm.core.annotate.Alias;
 import com.oracle.svm.core.annotate.Substitute;
 import com.oracle.svm.core.annotate.TargetClass;
+import org.springframework.nativex.substitutions.JaninoIsAround;
 import org.springframework.nativex.substitutions.LogbackIsAround;
 import org.springframework.nativex.substitutions.OnlyIfPresent;
 import org.springframework.nativex.substitutions.RemoveXmlSupport;
@@ -30,7 +31,8 @@ import org.springframework.nativex.substitutions.RemoveXmlSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@TargetClass(className = "ch.qos.logback.core.joran.conditional.PropertyEvalScriptBuilder", onlyWith = { OnlyIfPresent.class, LogbackIsAround.class, RemoveXmlSupport.class })
+@TargetClass(className = "ch.qos.logback.core.joran.conditional.PropertyEvalScriptBuilder", onlyWith = {
+		OnlyIfPresent.class, LogbackIsAround.class, JaninoIsAround.class, RemoveXmlSupport.class })
 final class Target_PropertyEvalScriptBuilder {
 
 	@Alias
