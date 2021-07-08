@@ -1,7 +1,7 @@
 plugins {
 	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 	id 'org.springframework.boot' version '2.4.3' apply false
-	id 'org.springframework.experimental.aot' version '0.10.2-SNAPSHOT'
+	id 'org.springframework.experimental.aot' version '0.11.0-SNAPSHOT'
 	id 'org.graalvm.buildtools.native' version '0.9.1' apply false
 }
 

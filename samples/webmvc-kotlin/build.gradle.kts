@@ -4,7 +4,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 plugins {
     id("org.springframework.boot") version "2.5.2"
     id("io.spring.dependency-management") version "1.0.10.RELEASE"
-    id("org.springframework.experimental.aot") version "0.10.2-SNAPSHOT"
+    id("org.springframework.experimental.aot") version "0.11.0-SNAPSHOT"
     kotlin("jvm") version "1.5.0"
     kotlin("plugin.spring") version "1.5.0"
     id("org.graalvm.buildtools.native") version "0.9.1"
