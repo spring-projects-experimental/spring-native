@@ -19,6 +19,7 @@ package org.springframework.context.annotation;
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
+import org.springframework.boot.context.event.EventPublishingRunListener;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.context.EnvironmentAware;
@@ -38,20 +39,24 @@ import org.springframework.nativex.hint.AccessBits;
 // TODO Check required access for enums like this FilterType
 @NativeHint(types = { @TypeHint(types = FilterType.class, access = AccessBits.CLASS | AccessBits.DECLARED_METHODS | AccessBits.DECLARED_FIELDS) })
 @NativeHint(types =
-	@TypeHint(typeNames = "org.springframework.context.annotation.ConfigurationClassParser$DefaultDeferredImportSelectorGroup"
-	))
+	@TypeHint(typeNames = "org.springframework.context.annotation.ConfigurationClassParser$DefaultDeferredImportSelectorGroup",
+	access=AccessBits.SKIP_FOR_NATIVE_NEXT))
 @NativeHint(types = {
 		@TypeHint(types = {
 				AutowireCapableBeanFactory.class, // security sample shows errors on startup without this
+				AutoConfigurationExcludeFilter.class,
+				AutowiredAnnotationBeanPostProcessor.class				
+		},access=AccessBits.SKIP_FOR_NATIVE_NEXT)
+})
+@NativeHint(types = {
+		@TypeHint(types = {
 				EmbeddedValueResolverAware.class,
 				EnvironmentAware.class,
 				AnnotationConfigApplicationContext.class,
 				CommonAnnotationBeanPostProcessor.class,
 				AnnotationScopeMetadataResolver.class,
-				AutoConfigurationExcludeFilter.class,
 				EventListenerMethodProcessor.class,
 				DefaultEventListenerFactory.class,
-				AutowiredAnnotationBeanPostProcessor.class
 				}),
 		@TypeHint(types= ComponentScan.Filter.class, access = AccessBits.CLASS | AccessBits.DECLARED_METHODS),
 		@TypeHint(types = { ConfigurationClassPostProcessor.class },

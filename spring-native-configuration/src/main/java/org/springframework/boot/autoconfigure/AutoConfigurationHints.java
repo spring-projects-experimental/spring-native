@@ -24,13 +24,13 @@ import org.springframework.nativex.hint.AccessBits;
 
 @NativeHint(trigger = ImportAutoConfigurationImportSelector.class, types =
 		{
-				@TypeHint(types = ImportAutoConfiguration.class),
-				@TypeHint(types = ImportAutoConfigurationImportSelector.class, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.RESOURCE)
+				@TypeHint(types = ImportAutoConfiguration.class,access = AccessBits.SKIP_FOR_NATIVE_NEXT),
+				@TypeHint(types = ImportAutoConfigurationImportSelector.class, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.RESOURCE |AccessBits.SKIP_FOR_NATIVE_NEXT)
 		}
 )
-@NativeHint(trigger = AutoConfigurationImportSelector.class)
+//@NativeHint(trigger = AutoConfigurationImportSelector.class)
 @TypeHint(types = { AutoConfigureBefore.class, AutoConfigureAfter.class, AutoConfigureOrder.class, AutoConfigurationPackage.class },
-  access = AccessBits.CLASS | AccessBits.DECLARED_METHODS) 
+  access = AccessBits.CLASS | AccessBits.DECLARED_METHODS | AccessBits.SKIP_FOR_NATIVE_NEXT) 
 // TODO why isn't this one pulled in via @EnableAutoConfiguration handling?
 @NativeHint(types = {
 	@TypeHint(types = {
@@ -38,14 +38,18 @@ import org.springframework.nativex.hint.AccessBits;
 			AutoConfigurationPackages.class,
 			AutoConfigurationPackages.Registrar.class,
 			AutoConfigurationPackages.BasePackages.class,
-			EnableAutoConfiguration.class,
-			SpringBootApplication.class
-	}, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.PUBLIC_METHODS)
+	}, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.PUBLIC_METHODS | AccessBits.SKIP_FOR_NATIVE_NEXT)
 })
 @NativeHint(types = {
-	@TypeHint(typeNames = {
-		"org.springframework.boot.autoconfigure.AutoConfigurationImportSelector$AutoConfigurationGroup" 
+		@TypeHint(types = {
+				EnableAutoConfiguration.class,
+				SpringBootApplication.class
+		}, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.PUBLIC_METHODS)
 	})
+@NativeHint(types = {
+	@TypeHint(typeNames = {
+		"org.springframework.boot.autoconfigure.AutoConfigurationImportSelector$AutoConfigurationGroup"
+	}, access=AccessBits.SKIP_FOR_NATIVE_NEXT)
 })
 public class AutoConfigurationHints implements NativeConfiguration {
 }

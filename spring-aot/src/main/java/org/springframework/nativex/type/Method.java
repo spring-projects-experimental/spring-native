@@ -297,7 +297,7 @@ public class Method {
 					}
 					Type ptype = typeSystem.resolve(t, true);
 					if (ptype == null) {
-						logger.debug("WARNING: method has unresolvable parameters: " + mn.name + mn.desc);
+						logger.debug("WARNING: method has unresolvable parameters: " + mn.name + mn.desc+" param type: "+t.getDescriptor());
 						unresolvableParams = true;
 					}
 					results.add(ptype);
@@ -432,7 +432,13 @@ public class Method {
 						name = primitiveToName(primitiveId);
 					}
 					if (name == null) {
-						throw new IllegalStateException("Problem producing array for " + mn.name + mn.desc + "  (param #" + p + ")");
+						// Unresolvable reference type, hmm
+						if (primitiveId.length()!=1) {
+							String id = primitiveId.substring(1,primitiveId.length()-1).replace("/",".");
+							output[p+1] = id;
+						} else {
+						throw new IllegalStateException("Problem producing array for " + mn.name + mn.desc + "  (param #" + p + ")="+primitiveId);
+						}
 					} else {
 						output[p+1] = name;
 					}

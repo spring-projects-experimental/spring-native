@@ -78,6 +78,8 @@ public class AccessBits {
 	 */
 	public static final int JNI = 0x0080;
 	
+	public static final int SKIP_FOR_NATIVE_NEXT = 0x0100;
+	
 	/**
 	 * No access.
 	 */

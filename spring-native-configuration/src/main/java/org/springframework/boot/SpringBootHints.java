@@ -93,5 +93,6 @@ import org.springframework.nativex.hint.AccessBits;
 				},access=AccessBits.CLASS),
 				@TypeHint(types = OriginProvider[].class)
 		})
+//@NativeHint(types = @TypeHint(types = org.springframework.boot.env.RandomValuePropertySourceEnvironmentPostProcessor.class, access=AccessBits.LOAD_AND_CONSTRUCT))
 public class SpringBootHints implements NativeConfiguration {
 }

@@ -1577,4 +1577,9 @@ public class TypeSystem {
 		return resolvedType != null;
 	}
 
+	public boolean isNativeNextMode() {
+		String mode = aotOptions==null?null:aotOptions.getMode();
+		return mode!=null && mode.equals(org.springframework.nativex.support.Mode.NATIVE_NEXT.toString()); 
+	}
+
 }

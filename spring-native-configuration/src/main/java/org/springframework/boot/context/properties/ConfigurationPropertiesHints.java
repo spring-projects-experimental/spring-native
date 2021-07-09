@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.nativex.hint.AccessBits;
 import org.springframework.nativex.hint.NativeHint;
 import org.springframework.nativex.hint.TypeHint;
 import org.springframework.nativex.type.HintDeclaration;
@@ -53,7 +54,7 @@ import org.springframework.nativex.type.TypeSystem;
 				"java.io.Serializable[]",
 				"java.lang.Comparable[]"
 		}),
-		@TypeHint(types= ArrayList.class)
+		@TypeHint(types= ArrayList.class, access=AccessBits.LOAD_AND_CONSTRUCT)
 })
 public class ConfigurationPropertiesHints implements NativeConfiguration {
 

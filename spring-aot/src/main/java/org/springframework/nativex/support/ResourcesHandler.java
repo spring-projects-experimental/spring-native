@@ -110,12 +110,14 @@ public class ResourcesHandler extends Handler {
 	 */
 	public void register() {
 		if (aotOptions.toMode() == Mode.NATIVE ||
-				aotOptions.toMode() == Mode.NATIVE_AGENT) {
+				aotOptions.toMode() == Mode.NATIVE_AGENT ||
+				aotOptions.toMode() == Mode.NATIVE_NEXT) {
 			processSpringFactories();
 		}
 		handleConstantHints(aotOptions.toMode() == Mode.NATIVE_INIT);
 		if (aotOptions.toMode() == Mode.NATIVE ||
-				aotOptions.toMode() == Mode.NATIVE_AGENT) {
+				aotOptions.toMode() == Mode.NATIVE_AGENT ||
+				aotOptions.toMode() == Mode.NATIVE_NEXT) {
 			handleSpringComponents();
 		}
 	}
@@ -731,8 +733,10 @@ public class ResourcesHandler extends Handler {
 				// This 'name' may not be the same as 's' if 's' referred to an inner type -
 				// 'name' will include the right '$' characters.
 				String name = t.getDottedName();
-				if (t.hasOnlySimpleConstructor()) {
-					reflectionHandler.addAccess(name, new String[][] { { "<init>" } },null, false);
+				if (t.hasOnlySimpleConstructor() && t.isPublic()) {
+					if (!t.getTypeSystem().isNativeNextMode()) {
+						reflectionHandler.addAccess(name, new String[][] { { "<init>" } },null, false);
+					}
 				} else {
 					reflectionHandler.addAccess(name, Flag.allDeclaredConstructors);
 				}
@@ -840,8 +844,11 @@ public class ResourcesHandler extends Handler {
 						continue;
 					}
 					if (ts.shouldBeProcessed(k)) {
-						for (String v : p.getProperty(k).split(",")) {
-							registerTypeReferencedBySpringFactoriesKey(v);
+						//org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=org.springframework.boot.autoconfigure.condition.OnBeanCondition,org.springframework.boot.autoconfigure.condition.OnClassCondition,org.springframework.boot.autoconfigure.condition.OnWebApplicationCondition	
+						if (!k.equals("org.springframework.boot.autoconfigure.AutoConfigurationImportFilter") || !ts.isNativeNextMode()) {
+							for (String v : p.getProperty(k).split(",")) {
+								registerTypeReferencedBySpringFactoriesKey(v);
+							}
 						}
 					} else {
 						logger.debug("Skipping processing spring.factories key " + k + " due to missing guard types");
@@ -1039,15 +1046,18 @@ public class ResourcesHandler extends Handler {
 				}
 				rcm.requestTypeAccess(typename, bits, ad.getMethodDescriptors(),ad.getFieldDescriptors());
 			} else {
-				if (AccessBits.isResourceAccessRequired(accessBits)) {
-					rcm.requestTypeAccess(typename, AccessBits.RESOURCE);
-					rcm.requestTypeAccess(typename, accessBits, ad.getMethodDescriptors(), ad.getFieldDescriptors());
-				} else {
-					rcm.requestTypeAccess(typename, accessBits, ad.getMethodDescriptors(), ad.getFieldDescriptors());
-					// TODO worth limiting it solely to @Bean methods? Need to check how many
-					// configuration classes typically have methods that are not @Bean
+				// e.g. RedisCacheConfiguration hint directly on ImportSelector
+				if (!ts.isNativeNextMode() || !t.isAtConfiguration()) {
+					if (AccessBits.isResourceAccessRequired(accessBits)) {
+						rcm.requestTypeAccess(typename, AccessBits.RESOURCE);
+						rcm.requestTypeAccess(typename, accessBits, ad.getMethodDescriptors(), ad.getFieldDescriptors());
+					} else {
+						rcm.requestTypeAccess(typename, accessBits, ad.getMethodDescriptors(), ad.getFieldDescriptors());
+						// TODO worth limiting it solely to @Bean methods? Need to check how many
+						// configuration classes typically have methods that are not @Bean
+					}
 				}
-				if (t.isAtConfiguration()) {
+				if (t.isAtConfiguration() && !ts.isNativeNextMode()) {
 					// This is because of cases like Transaction auto configuration where the
 					// specific type names types like ProxyTransactionManagementConfiguration
 					// are referred to from the AutoProxyRegistrar CompilationHint.
@@ -1305,21 +1315,25 @@ public class ResourcesHandler extends Handler {
 		Map<Type,ReachedBy> toFollow = new HashMap<>();
 		for (HintApplication hint : hints) {
 			logger.debug("processing hint " + hint);
-			passesTests = processExplicitTypeReferencesFromHint(pc, accessManager, hint, toFollow);
+			RequestedConfigurationManager hintRCM = new RequestedConfigurationManager();
+			passesTests = processExplicitTypeReferencesFromHint(pc, hintRCM, hint, toFollow);
 			if (!passesTests && aotOptions.isRemoveUnusedConfig()) {
 				break;
 			}
-			passesTests = processImplicitTypeReferencesFromHint(pc, accessManager, type, hint, toFollow);
+			passesTests = processImplicitTypeReferencesFromHint(pc, hintRCM, type, hint, toFollow);
 			if (!passesTests && aotOptions.isRemoveUnusedConfig()) {
 				break;
 			}
-			registerAnnotationChain(accessManager, hint.getAnnotationChain());
-			accessManager.requestProxyDescriptors(hint.getProxyDescriptors());
-			accessManager.requestResourcesDescriptors(hint.getResourceDescriptors());
-			accessManager.requestInitializationDescriptors(hint.getInitializationDescriptors());
-			accessManager.requestOptions(hint.getOptions());
-			accessManager.requestSerializationTypes(hint.getSerializationTypes());
-			accessManager.requestJniTypes(hint.getJNITypes());
+			if (!ts.isNativeNextMode() || !isConditionalChain(hint.getAnnotationChain())) {
+				accessManager.mergeIn(hintRCM);
+				registerAnnotationChain(accessManager, hint.getAnnotationChain());
+				accessManager.requestProxyDescriptors(hint.getProxyDescriptors());
+				accessManager.requestResourcesDescriptors(hint.getResourceDescriptors());
+				accessManager.requestInitializationDescriptors(hint.getInitializationDescriptors());
+				accessManager.requestOptions(hint.getOptions());
+				accessManager.requestSerializationTypes(hint.getSerializationTypes());
+				accessManager.requestJniTypes(hint.getJNITypes());
+			}
 		}
 
 		// TODO think about pulling out into extension mechanism for condition evaluators
@@ -1355,7 +1369,9 @@ public class ResourcesHandler extends Handler {
 //				}
 //				logger.debug("< running component processors on "+type.getDottedName());
 //			}
-			if (type.isAtConfiguration()) {
+			
+			// prevent this in native-next
+			if (!ts.isNativeNextMode() && type.isAtConfiguration()) {
 				checkForAutoConfigureBeforeOrAfter(type, accessManager);
 				String[][] validMethodsSubset = processTypeAtBeanMethods(pc, accessManager, toFollow, type);
 				if (validMethodsSubset != null) {
@@ -1386,6 +1402,16 @@ public class ResourcesHandler extends Handler {
 		}
 		pc.pop();
 		return passesTests;
+	}
+
+	private boolean isConditionalChain(List<Type> annotationChain) {
+		if (annotationChain.size()>1 && 
+			(annotationChain.get(1).getDottedName().equals("org.springframework.boot.autoconfigure.condition.ConditionalOnClass") ||
+			 annotationChain.get(1).getDottedName().equals("org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean") ||
+			 annotationChain.get(1).getDottedName().equals("org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate"))) {
+			return true;
+		}
+		return false;
 	}
 
 	private void checkForImportedConfigurations(Type type, Map<Type, ReachedBy> toFollow) {
@@ -1474,9 +1500,11 @@ public class ResourcesHandler extends Handler {
 			isConfiguration = resolve.isAtConfiguration();
 		}
 
-		accessManager.requestTypeAccess(typename, Type.inferAccessRequired(type));
-		// TODO need this guard? if (isConfiguration(configType)) {
-		registerHierarchy(pc, type, accessManager);
+		if (!ts.isNativeNextMode() || (!isConfiguration && !type.isCondition())) {
+			accessManager.requestTypeAccess(typename, Type.inferAccessRequired(type));
+			// TODO need this guard? if (isConfiguration(configType)) {
+			registerHierarchy(pc, type, accessManager);
+		}
 
 		recursivelyCallProcessTypeForHierarchyOfType(pc, type);
 		logger.debug("<processHierarchy "+type.getShortName());
@@ -1487,7 +1515,7 @@ public class ResourcesHandler extends Handler {
 		List<Type> nestedTypes = type.getNestedTypes();
 		for (Type t : nestedTypes) {
 			if (pc.recordVisit(t.getName())) {
-				if (!(t.isAtConfiguration() || t.isConditional() || t.isMetaImportAnnotated() || t.isComponent())) {
+				if (!(t.isAtConfiguration() || (t.isConditional() && !ts.isNativeNextMode()) || t.isMetaImportAnnotated() || t.isComponent())) {
 					continue;
 				}
 				try {
@@ -1800,7 +1828,9 @@ public class ResourcesHandler extends Handler {
 					if (returnType.isComponent()) {
 						toFollow.put(returnType, ReachedBy.AtBeanReturnType);
 					}
-					rcm.mergeIn(methodRCM);
+					if (!ts.isNativeNextMode()) {
+						rcm.mergeIn(methodRCM);
+					}
 					logger.debug("method passed checks - adding configuration for it");
 				} catch (IllegalStateException ise) {
 					// usually if asConfigurationArray() fails - due to an unresolvable type - it indicates
@@ -1985,6 +2015,10 @@ public class ResourcesHandler extends Handler {
 	}
 
 	private void registerAnnotationChain(RequestedConfigurationManager tar, List<Type> annotationChain) {
+		// Causes configurations to register since they have those annotations on them
+		if (ts.isNativeNextMode() && annotationChain.size()>0 && annotationChain.get(0).isAtConfiguration()) {
+			return;
+		}
 		logger.debug("attempting registration of " + annotationChain.size()
 				+ " elements of annotation hint chain");
 		for (int i = 0; i < annotationChain.size(); i++) {

@@ -1246,11 +1246,11 @@ public class Type {
 			if (isImportSelector() && hints.size() == 0) {
 				// Failing early as this will likely result in a problem later - fix is
 				// typically (right now) to add a new Hint in the configuration module
-				if (typeSystem.failOnMissingSelectorHint()) {
-					throw new IllegalStateException("No access hint found for import selector: " + getDottedName());
-				} else {
-					logger.debug("WARNING: No access hint found for import selector: " + getDottedName());
-				}
+//				if (typeSystem.failOnMissingSelectorHint() && !typeSystem.isNativeNextMode()) {
+//					throw new IllegalStateException("No access hint found for import selector: " + getDottedName());
+//				} else {
+				logger.debug("WARNING: No access hint found for import selector: " + getDottedName());
+//				}
 			}
 		} catch (MissingTypeException mte) {
 			logger.debug("Unable to determine if type " + getName()
@@ -1914,6 +1914,19 @@ public class Type {
 				processHintList(value, anno -> unpackFieldInfo(anno, fds));
 			}
 		}
+		String mode = typeSystem.aotOptions==null?null:typeSystem.aotOptions.getMode();
+		if (mode!=null && accessRequired != -1 && 
+			mode.equals(org.springframework.nativex.support.Mode.NATIVE_NEXT.toString()) && 
+			(accessRequired&AccessBits.SKIP_FOR_NATIVE_NEXT)!=0) {
+			logger.debug("Skipping hints not useful for NATIVE_NEXT: found on "+this.getDottedName()+" (includes TypeHints for "+types+")");
+			return;
+		}
+		if (accessRequired == AccessBits.SKIP_FOR_NATIVE_NEXT) {
+			accessRequired = -1;
+		} else if (accessRequired !=-1 && (accessRequired & AccessBits.SKIP_FOR_NATIVE_NEXT)!=0) {
+			accessRequired = accessRequired - AccessBits.SKIP_FOR_NATIVE_NEXT;
+		}
+		System.out.println(accessRequired+" "+Integer.toHexString(accessRequired));
 		for (org.objectweb.asm.Type type : types) {
 			AccessDescriptor ad = null;
 			if (accessRequired == -1) {
@@ -2235,7 +2248,9 @@ public class Type {
 		if (t == null) {
 			return AccessBits.FULL_REFLECTION;
 		}
-		if (t.isAtConfiguration() || t.isMetaImportAnnotated()) {
+		if (t.isAtConfiguration() && t.getTypeSystem().isNativeNextMode()) {
+			return AccessBits.NONE;
+		} else if (t.isAtConfiguration() || t.isMetaImportAnnotated()) {
 			return AccessBits.ALL;
 		} else if (t.isImportSelector()) {
 			return AccessBits.LOAD_AND_CONSTRUCT | AccessBits.RESOURCE;
@@ -2260,7 +2275,7 @@ public class Type {
 			}
 			return access;
 		} else if (t.isCondition()) {
-			return AccessBits.CLASS | AccessBits.DECLARED_CONSTRUCTORS | AccessBits.RESOURCE;
+			return t.getTypeSystem().isNativeNextMode()?AccessBits.NONE:AccessBits.CLASS | AccessBits.DECLARED_CONSTRUCTORS | AccessBits.RESOURCE;
 		} else if (t.isComponent() || t.isApplicationListener()) {
 			return AccessBits.ALL;
 		} else if (t.isEnvironmentPostProcessor()) {

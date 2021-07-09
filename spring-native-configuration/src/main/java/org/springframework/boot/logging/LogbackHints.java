@@ -30,6 +30,8 @@ import org.springframework.boot.logging.logback.ColorConverter;
 import org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter;
 import org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter;
 import org.springframework.nativex.type.NativeConfiguration;
+import org.springframework.nativex.hint.AccessBits;
+import org.springframework.nativex.hint.MethodHint;
 import org.springframework.nativex.hint.NativeHint;
 import org.springframework.nativex.hint.TypeHint;
 
@@ -48,6 +50,6 @@ import org.springframework.nativex.hint.TypeHint;
 		ExtendedWhitespaceThrowableProxyConverter.class,
 		IntegerTokenConverter.class,
 		DateTokenConverter.class
-}))
+},access=AccessBits.CLASS, methods = @MethodHint(name="<init>")))
 public class LogbackHints implements NativeConfiguration {
 }
