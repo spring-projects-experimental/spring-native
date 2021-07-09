@@ -46,6 +46,8 @@ public class DefaultBeanDefinitionSelector implements BeanDefinitionSelector {
 
 		// See https://github.com/spring-projects/spring-data-commons/pull/2399
 		this.excludedBeanNames.add("projectingArgumentResolverBeanPostProcessor");
+		// Need Spring Boot 2.5.3-SNAPSHOT
+		this.excludedBeanNames.add("healthEndpointGroupsBeanPostProcessor");
 	}
 
 	@Override
