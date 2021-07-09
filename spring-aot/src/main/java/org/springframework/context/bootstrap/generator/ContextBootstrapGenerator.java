@@ -29,6 +29,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +38,8 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.bootstrap.generator.bean.BeanRegistrationGenerator;
 import org.springframework.context.bootstrap.generator.bean.BeanValueWriter;
 import org.springframework.context.bootstrap.generator.bean.BeanValueWriterSupplier;
@@ -92,14 +95,17 @@ public class ContextBootstrapGenerator {
 	}
 
 	public JavaFile createClass(String packageName, String bootstrapClassName, MethodSpec bootstrapMethod) {
-		return JavaFile.builder(packageName, TypeSpec.classBuilder(bootstrapClassName).addModifiers(Modifier.PUBLIC)
+		ParameterizedTypeName typeName = ParameterizedTypeName.get(
+				ClassName.get(ApplicationContextInitializer.class),
+				ClassName.get(GenericApplicationContext.class));
+		return JavaFile.builder(packageName, TypeSpec.classBuilder(bootstrapClassName).addSuperinterface(typeName).addModifiers(Modifier.PUBLIC)
 				.addMethod(bootstrapMethod).build()).build();
 	}
 
 	public MethodSpec generateBootstrapMethod(ConfigurableListableBeanFactory beanFactory, String packageName,
 			BeanDefinitionSelector selector) {
 		ClassLoader classLoader = beanFactory.getBeanClassLoader();
-		MethodSpec.Builder method = MethodSpec.methodBuilder("bootstrap").addModifiers(Modifier.PUBLIC)
+		MethodSpec.Builder method = MethodSpec.methodBuilder("initialize").addModifiers(Modifier.PUBLIC)
 				.addParameter(GenericApplicationContext.class, "context");
 		String[] beanNames = beanFactory.getBeanDefinitionNames();
 		for (String beanName : beanNames) {

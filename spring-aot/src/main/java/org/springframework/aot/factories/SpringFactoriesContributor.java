@@ -41,6 +41,7 @@ import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.core.io.support.SpringFactoriesLoader;
 import org.springframework.core.type.classreading.TypeSystem;
 import org.springframework.nativex.AotOptions;
+import org.springframework.nativex.support.Mode;
 import org.springframework.nativex.type.SpringFactoriesProcessor;
 import org.springframework.util.StringUtils;
 
@@ -92,6 +93,16 @@ public class SpringFactoriesContributor implements BootstrapContributor {
 			properties = filterProperties(properties);
 			for (Map.Entry<?, ?> entry : properties.entrySet()) {
 				String factoryTypeName = ((String) entry.getKey()).trim();
+
+				// Filter out build time entries
+				// TODO To be refactored to avoid harcoding that
+				if (factoryTypeName.startsWith("org.springframework.context.bootstrap") ||
+								factoryTypeName.startsWith("org.springframework.context.origin") ||
+								factoryTypeName.startsWith("org.springframework.boot.autoconfigure")) {
+					logger.debug("Skip build time factory Type:" + factoryTypeName);
+					continue;
+				}
+
 				logger.debug("Loading factory Type:" + factoryTypeName);
 				String[] factoryNames = StringUtils.commaDelimitedListToStringArray((String) entry.getValue());
 

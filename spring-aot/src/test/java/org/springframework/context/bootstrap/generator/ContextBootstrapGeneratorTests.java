@@ -64,8 +64,8 @@ class ContextBootstrapGeneratorTests {
 	@Test
 	void bootstrapClassGeneratesStructure() {
 		ContextBootstrapStructure structure = this.generatorTester.generate();
-		assertThat(structure).contextBootstrap().lines().containsSubsequence("public class ContextBootstrap {",
-				"  public void bootstrap(GenericApplicationContext context) {", "  }", "}");
+		assertThat(structure).contextBootstrap().lines().containsSubsequence("public class ContextBootstrap implements ApplicationContextInitializer<GenericApplicationContext> {",
+				"  public void initialize(GenericApplicationContext context) {", "  }", "}");
 		assertThat(structure).contextBootstrap().contains("import " + GenericApplicationContext.class.getName() + ";");
 	}
 

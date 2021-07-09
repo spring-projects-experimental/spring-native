@@ -1,0 +1,4 @@
+[
+  ["java.lang.reflect.ParameterizedType","org.springframework.core.SerializableTypeWrapper$SerializableTypeProxy","java.io.Serializable"],
+  ["org.springframework.boot.context.properties.ConfigurationProperties","org.springframework.core.annotation.SynthesizedAnnotation"]
+]

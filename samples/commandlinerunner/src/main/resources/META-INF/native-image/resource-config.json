@@ -1,0 +1,9 @@
+{
+  "resources":{
+  "includes":[
+    {"pattern":"\\Qapplication.properties\\E"}, 
+    {"pattern":"\\Qjava/lang/invoke/MethodHandleImpl$BindCaller$T.class\\E"}, 
+    {"pattern":"\\Qorg/slf4j/impl/StaticLoggerBinder.class\\E"}
+  ]},
+  "bundles":[]
+}
