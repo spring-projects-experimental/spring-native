@@ -20,10 +20,8 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import com.squareup.javapoet.CodeBlock;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -31,6 +29,7 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.context.bootstrap.generator.sample.dependency.DependencyConfiguration;
 import org.springframework.context.bootstrap.generator.sample.dependency.GenericDependencyConfiguration;
 import org.springframework.context.bootstrap.generator.sample.factory.SampleFactory;
+import org.springframework.context.bootstrap.generator.test.CodeSnippet;
 import org.springframework.util.ReflectionUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,8 +46,8 @@ class MethodBeanValueWriterTests {
 		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(SampleFactory.class.getName())
 				.setFactoryMethod("create").addConstructorArgReference("testBean").getBeanDefinition();
 		Method method = ReflectionUtils.findMethod(SampleFactory.class, "create", String.class);
-		assertGeneratedCode(beanDefinition, method, (code) -> assertThat(code)
-				.endsWith("SampleFactory.create(context.getBean(\"testBean\", java.lang.String.class))"));
+		assertThat(generateCode(beanDefinition, method)).isEqualTo(
+				"() -> SampleFactory.create(context.getBean(\"testBean\", String.class))");
 	}
 
 	@Test
@@ -56,8 +55,8 @@ class MethodBeanValueWriterTests {
 		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(SampleFactory.class.getName())
 				.setFactoryMethod("create").addConstructorArgValue('\\').getBeanDefinition();
 		Method method = ReflectionUtils.findMethod(SampleFactory.class, "create", char.class);
-		assertGeneratedCode(beanDefinition, method,
-				(code) -> assertThat(code).endsWith("SampleFactory.create('\\\\')"));
+		assertThat(generateCode(beanDefinition, method)).isEqualTo(
+				"() -> SampleFactory.create('\\\\')");
 	}
 
 	@Test
@@ -66,8 +65,9 @@ class MethodBeanValueWriterTests {
 				.rootBeanDefinition(DependencyConfiguration.class.getName()).setFactoryMethod("injectList")
 				.getBeanDefinition();
 		Method method = ReflectionUtils.findMethod(DependencyConfiguration.class, "injectList", List.class);
-		assertGeneratedCode(beanDefinition, method, (code) -> assertThat(code).endsWith(
-				".injectList(context.getBeanProvider(java.lang.String.class).orderedStream().collect(java.util.stream.Collectors.toList()))"));
+		assertThat(generateCode(beanDefinition, method)).containsSequence(
+				"() -> context.getBean(DependencyConfiguration.class)",
+				".injectList(context.getBeanProvider(String.class).orderedStream().collect(Collectors.toList()))");
 	}
 
 	@Test
@@ -76,8 +76,9 @@ class MethodBeanValueWriterTests {
 				.rootBeanDefinition(DependencyConfiguration.class.getName()).setFactoryMethod("injectSet")
 				.getBeanDefinition();
 		Method method = ReflectionUtils.findMethod(DependencyConfiguration.class, "injectSet", Set.class);
-		assertGeneratedCode(beanDefinition, method, (code) -> assertThat(code).endsWith(
-				".injectSet(context.getBeanProvider(java.lang.String.class).orderedStream().collect(java.util.stream.Collectors.toSet()))"));
+		assertThat(generateCode(beanDefinition, method)).containsSequence(
+				"() -> context.getBean(DependencyConfiguration.class)",
+				".injectSet(context.getBeanProvider(String.class).orderedStream().collect(Collectors.toSet()))");
 	}
 
 	@Test
@@ -85,8 +86,8 @@ class MethodBeanValueWriterTests {
 		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(SampleFactory.class.getName())
 				.setFactoryMethod("create").addConstructorArgValue("java.lang.String").getBeanDefinition();
 		Method method = ReflectionUtils.findMethod(SampleFactory.class, "create", Class.class);
-		assertGeneratedCode(beanDefinition, method,
-				(code) -> assertThat(code).endsWith("SampleFactory.create(java.lang.String.class)"));
+		assertThat(generateCode(beanDefinition, method)).isEqualTo(
+				"() -> SampleFactory.create(String.class)");
 	}
 
 	@Test
@@ -94,11 +95,11 @@ class MethodBeanValueWriterTests {
 		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(GenericDependencyConfiguration.class.getName())
 				.setFactoryMethod("injectWildcard").getBeanDefinition();
 		Method method = ReflectionUtils.findMethod(GenericDependencyConfiguration.class, "injectWildcard", Predicate.class);
-		assertGeneratedCode(beanDefinition, method,
-				(code) -> assertThat(code).containsSubsequence(
-						"() -> {",
-						"ObjectProvider<java.util.function.Predicate<?>> predicateProvider = context.getBeanProvider(org.springframework.core.ResolvableType.forClassWithGenerics(java.util.function.Predicate.class, java.lang.Object.class));",
-						"return context.getBean(org.springframework.context.bootstrap.generator.sample.dependency.GenericDependencyConfiguration.class).injectWildcard(predicateProvider.getObject());"));
+		assertThat(generateCode(beanDefinition, method)).lines().containsOnly(
+				"() -> {",
+				"  ObjectProvider<Predicate<?>> predicateProvider = context.getBeanProvider(ResolvableType.forClassWithGenerics(Predicate.class, Object.class));",
+				"  return context.getBean(GenericDependencyConfiguration.class).injectWildcard(predicateProvider.getObject());",
+				"}");
 	}
 
 	@Test
@@ -106,17 +107,16 @@ class MethodBeanValueWriterTests {
 		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(GenericDependencyConfiguration.class.getName())
 				.setFactoryMethod("injectWildcardCollection").getBeanDefinition();
 		Method method = ReflectionUtils.findMethod(GenericDependencyConfiguration.class, "injectWildcardCollection", Collection.class);
-		assertGeneratedCode(beanDefinition, method,
-				(code) -> assertThat(code).containsSubsequence(
-						"() -> {",
-						"org.springframework.beans.factory.ObjectProvider<java.util.function.Predicate<?>> collectionPredicateProvider = context.getBeanProvider(org.springframework.core.ResolvableType.forClassWithGenerics(java.util.function.Predicate.class, java.lang.Object.class));",
-						"return context.getBean(org.springframework.context.bootstrap.generator.sample.dependency.GenericDependencyConfiguration.class).injectWildcardCollection(collectionPredicateProvider.orderedStream().collect(java.util.stream.Collectors.toList()));"));
+		assertThat(generateCode(beanDefinition, method)).lines().containsOnly(
+				"() -> {",
+				"  ObjectProvider<Predicate<?>> collectionPredicateProvider = context.getBeanProvider(ResolvableType.forClassWithGenerics(Predicate.class, Object.class));",
+				"  return context.getBean(GenericDependencyConfiguration.class).injectWildcardCollection(collectionPredicateProvider.orderedStream().collect(Collectors.toList()));",
+				"}");
 	}
 
-	private void assertGeneratedCode(BeanDefinition beanDefinition, Method method, Consumer<String> code) {
-		CodeBlock.Builder builder = CodeBlock.builder();
-		new MethodBeanValueWriter(beanDefinition, getClass().getClassLoader(), method).writeValueSupplier(builder);
-		code.accept(builder.build().toString());
+	private CodeSnippet generateCode(BeanDefinition beanDefinition, Method method) {
+		return CodeSnippet.of((code) ->
+				new MethodBeanValueWriter(beanDefinition, getClass().getClassLoader(), method).writeValueSupplier(code));
 	}
 
 }
