@@ -18,13 +18,18 @@ package org.springframework.context.bootstrap.generator.bean;
 
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.CodeBlock.Builder;
+import com.squareup.javapoet.TypeName;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -96,8 +101,9 @@ public abstract class AbstractBeanValueWriter implements BeanValueWriter {
 		return Arrays.stream(exceptionTypes).anyMatch((ex) -> !RuntimeException.class.isAssignableFrom(ex));
 	}
 
-	protected void handleParameters(CodeBlock.Builder code, Parameter[] parameters,
+	protected List<ParameterResolution> resolveParameters(Parameter[] parameters,
 			Function<Integer, ResolvableType> parameterTypeFactory) {
+		List<ParameterResolution> parametersResolution = new ArrayList<>();
 		for (int i = 0; i < parameters.length; i++) {
 			ResolvableType parameterType = parameterTypeFactory.apply(i);
 			ValueHolder userValue = this.beanDefinition.getConstructorArgumentValues().getIndexedArgumentValue(i,
@@ -105,17 +111,18 @@ public abstract class AbstractBeanValueWriter implements BeanValueWriter {
 			if (userValue != null) {
 				Object value = userValue.getValue();
 				if (value instanceof BeanReference) {
-					writeParameterBeanDependency(code, ((BeanReference) value).getBeanName(), parameterType);
+					parametersResolution.add(resolveParameterBeanDependency(((BeanReference) value).getBeanName(), parameterType));
 				}
-				writeParameterValue(code, value, parameterType);
+				else {
+					parametersResolution.add(ParameterResolution.ofParameter((code) ->
+							writeParameterValue(code, value, parameterType)));
+				}
 			}
 			else {
-				writeParameterDependency(code, parameters[i], parameterType);
-			}
-			if (i < parameters.length - 1) {
-				code.add(", ");
+				parametersResolution.add(resolveParameterDependency(parameters[i], parameterType));
 			}
 		}
+		return parametersResolution;
 	}
 
 	// workaround to account for the Spring Boot use case for now.
@@ -177,34 +184,72 @@ public abstract class AbstractBeanValueWriter implements BeanValueWriter {
 				|| valueType == Character.class || valueType == Byte.class || valueType == Boolean.class);
 	}
 
-	protected void writeParameterDependency(CodeBlock.Builder code, Parameter parameter, ResolvableType parameterType) {
+	protected ParameterResolution resolveParameterDependency(Parameter parameter, ResolvableType parameterType) {
 		Class<?> resolvedClass = parameterType.toClass();
 		if (ObjectProvider.class.isAssignableFrom(resolvedClass)) {
-			code.add("context.getBeanProvider(");
-			TypeHelper.generateResolvableTypeFor(code, parameterType.as(ObjectProvider.class).getGeneric(0));
-			code.add(")");
+			return resolveObjectProvider(parameter, parameterType.as(ObjectProvider.class).getGeneric(0), false,
+					(assignment) -> assignment.add(""));
 		}
 		else if (Collection.class.isAssignableFrom(resolvedClass)) {
-			code.add("context.getBeanProvider(");
-			TypeHelper.generateResolvableTypeFor(code, parameterType.as(Collection.class).getGeneric(0));
 			String collectors = (Set.class.isAssignableFrom(resolvedClass)) ? "toSet()" : "toList()";
-			code.add(").orderedStream().collect($T.$L)", Collectors.class, collectors);
+			ResolvableType collectionType = parameterType.as(Collection.class).getGeneric(0);
+			return resolveObjectProvider(parameter, collectionType, collectionType.hasGenerics(),
+					(assignment) -> assignment.add(".orderedStream().collect($T.$L)", Collectors.class, collectors));
+		}
+		else if (parameterType.hasGenerics()) {
+			return resolveObjectProvider(parameter, parameterType, true,
+					(assignment) -> assignment.add(".getObject()"));
 		}
 		else if (resolvedClass.isAssignableFrom(GenericApplicationContext.class)) {
-			code.add("context");
+			return ParameterResolution.ofParameter((code) -> code.add("context"));
 		}
 		else if (resolvedClass.isAssignableFrom(ConfigurableListableBeanFactory.class)) {
-			code.add("context.getBeanFactory()");
+			return ParameterResolution.ofParameter((code) -> code.add("context.getBeanFactory()"));
 		}
 		else if (resolvedClass.isAssignableFrom(ConfigurableEnvironment.class)) {
-			code.add("context.getEnvironment()");
+			return ParameterResolution.ofParameter((code) -> code.add("context.getEnvironment()"));
 		}
 		else {
-			writeParameterBeanDependency(code, null, parameterType);
+			return resolveParameterBeanDependency(null, parameterType);
 		}
 	}
 
-	private void writeParameterBeanDependency(CodeBlock.Builder code, String beanName, ResolvableType parameterType) {
+	/**
+	 * Create a {@link ParameterResolution} for the specified {@link Parameter} when an
+	 * {@link ObjectProvider} is required.
+	 * @param parameter the parameter to handle
+	 * @param targetType the target type for the object provider
+	 * @param shouldUseAssignment whether an assignment is required
+	 * @param objectProviderAssignment a callback to invoke a method on the {@link ObjectProvider}
+	 * @return the parameter resolution
+	 */
+	private ParameterResolution resolveObjectProvider(Parameter parameter, ResolvableType targetType,
+			boolean shouldUseAssignment, Consumer<Builder> objectProviderAssignment) {
+		TypeName parameterTypeName = TypeName.get(targetType.getType());
+		if (shouldUseAssignment) {
+			Builder assignment = CodeBlock.builder();
+			String parameterName = String.format("%sProvider", parameter.getName());
+			assignment.add("$T<$T> $L = ", ObjectProvider.class, parameterTypeName, parameterName);
+			assignment.add("context.getBeanProvider(");
+			TypeHelper.generateResolvableTypeFor(assignment, targetType);
+			assignment.add(")");
+			Builder parameterValue = CodeBlock.builder();
+			parameterValue.add("$L", parameterName);
+			objectProviderAssignment.accept(parameterValue);
+			return ParameterResolution.ofAssignableParameter(assignment, parameterValue);
+		}
+		else {
+			return ParameterResolution.ofParameter((code) -> {
+				code.add("context.getBeanProvider(");
+				TypeHelper.generateResolvableTypeFor(code, targetType);
+				code.add(")");
+				objectProviderAssignment.accept(code);
+			});
+		}
+	}
+
+	private ParameterResolution resolveParameterBeanDependency(String beanName, ResolvableType parameterType) {
+		CodeBlock.Builder code = CodeBlock.builder();
 		Class<?> resolvedClass = parameterType.toClass();
 		if (beanName != null) {
 			code.add("context.getBean($S, $T.class)", beanName, resolvedClass);
@@ -212,6 +257,7 @@ public abstract class AbstractBeanValueWriter implements BeanValueWriter {
 		else {
 			code.add("context.getBean($T.class)", resolvedClass);
 		}
+		return ParameterResolution.ofParameter(code);
 	}
 
 	// Copied from com.squareup.javapoet.Util

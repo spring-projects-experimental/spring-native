@@ -18,6 +18,7 @@ package org.springframework.context.bootstrap.generator.bean;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.List;
 
 import com.squareup.javapoet.CodeBlock;
 
@@ -65,7 +66,18 @@ public class MethodBeanValueWriter extends AbstractBeanValueWriter {
 		if (wrapException) {
 			code.add("$T.wrapException(", ExceptionHandler.class);
 		}
-		code.add("() -> ");
+		code.add("() ->");
+		// We need to process any parameters that might hold generic to manage them upfront.
+		List<ParameterResolution> parameters = resolveParameters(this.method.getParameters(), (i) -> ResolvableType.forMethodParameter(this.method, i));
+		boolean hasAssignment = parameters.stream().anyMatch(ParameterResolution::hasAssignment);
+		if (hasAssignment) {
+			code.beginControlFlow("");
+			parameters.stream().filter(ParameterResolution::hasAssignment).forEach((parameter) -> parameter.applyAssignment(code));
+			code.add("return ");
+		}
+		else {
+			code.add(" ");
+		}
 		if (Modifier.isStatic(this.method.getModifiers())) {
 			code.add("$T", getDeclaringType());
 		}
@@ -73,10 +85,18 @@ public class MethodBeanValueWriter extends AbstractBeanValueWriter {
 			code.add("context.getBean($T.class)", this.method.getDeclaringClass());
 		}
 		code.add(".$L(", this.method.getName());
-		handleParameters(code, this.method.getParameters(), (i) -> ResolvableType.forMethodParameter(this.method, i));
+		for (int i = 0; i < parameters.size(); i++) {
+			parameters.get(i).applyParameter(code);
+			if (i < parameters.size() - 1) {
+				code.add(", ");
+			}
+		}
 		code.add(")");
 		if (wrapException) {
 			code.add(")");
+		}
+		if (hasAssignment) {
+			code.add(";\n").unindent().add("}");
 		}
 	}
 

@@ -25,7 +25,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.autoconfigure.info.ProjectInfoAutoConfiguration;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.bootstrap.generator.sample.SimpleConfiguration;
 import org.springframework.context.bootstrap.generator.sample.autoconfigure.AutoConfigurationPackagesConfiguration;
 import org.springframework.context.bootstrap.generator.sample.dependency.DependencyConfiguration;
@@ -54,8 +53,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Stephane Nicoll
  */
 class ContextBootstrapGeneratorTests {
-
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner();
 
 	private ContextBootstrapGeneratorTester generatorTester;
 
@@ -259,7 +256,10 @@ class ContextBootstrapGeneratorTests {
 		assertThat(structure).contextBootstrap().contains(
 				"RootBeanDefinition stringRepositoryHolderBeanDef = new RootBeanDefinition();",
 				"stringRepositoryHolderBeanDef.setTargetType(ResolvableType.forClassWithGenerics(RepositoryHolder.class, ResolvableType.forClass(String.class), ResolvableType.forClassWithGenerics(Repository.class, String.class)));",
-				"stringRepositoryHolderBeanDef.setInstanceSupplier(() -> context.getBean(GenericConfiguration.class).stringRepositoryHolder(context.getBean(Repository.class)));",
+				"stringRepositoryHolderBeanDef.setInstanceSupplier(() -> {",
+				"ObjectProvider<Repository<String>> repoProvider = context.getBeanProvider(ResolvableType.forClassWithGenerics(Repository.class, String.class));",
+				"return context.getBean(GenericConfiguration.class).stringRepositoryHolder(repoProvider.getObject());",
+				" });",
 				"context.registerBeanDefinition(\"stringRepositoryHolder\", stringRepositoryHolderBeanDef);");
 	}
 

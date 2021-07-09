@@ -18,7 +18,7 @@ package org.springframework.context.bootstrap.generator.bean;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Parameter;
+import java.util.List;
 
 import com.squareup.javapoet.CodeBlock;
 
@@ -67,17 +67,36 @@ public class ConstructorBeanValueWriter extends AbstractBeanValueWriter {
 		if (wrapException) {
 			code.add("$T.wrapException(", ExceptionHandler.class);
 		}
-		Parameter[] parameters = this.constructor.getParameters();
-		if (parameters.length == 0) {
+		// We need to process any parameters that might hold generic to manage them upfront.
+		List<ParameterResolution> parameters = resolveParameters(this.constructor.getParameters(), (i) -> ResolvableType.forConstructorParameter(this.constructor, i));
+		boolean hasAssignment = parameters.stream().anyMatch(ParameterResolution::hasAssignment);
+		if (parameters.isEmpty()) {
 			code.add("$T::new", getType());
 		}
 		else {
-			code.add("() -> new $T(", getDeclaringType());
-			handleParameters(code, parameters, (i) -> ResolvableType.forConstructorParameter(this.constructor, i));
-			code.add(")"); // End of constructor
+			code.add("() ->");
+			if (hasAssignment) {
+				code.beginControlFlow("");
+				parameters.stream().filter(ParameterResolution::hasAssignment).forEach((parameter) -> parameter.applyAssignment(code));
+				code.add("return ");
+			}
+			else {
+				code.add(" ");
+			}
+			code.add("new $T(", getDeclaringType());
+			for (int i = 0; i < parameters.size(); i++) {
+				parameters.get(i).applyParameter(code);
+				if (i < parameters.size() - 1) {
+					code.add(", ");
+				}
+			}
+			code.add(")");
 		}
 		if (wrapException) {
 			code.add(")");
+		}
+		if (hasAssignment) {
+			code.add(";\n").unindent().add("}");
 		}
 	}
 

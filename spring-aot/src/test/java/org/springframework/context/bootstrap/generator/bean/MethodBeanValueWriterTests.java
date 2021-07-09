@@ -17,9 +17,11 @@
 package org.springframework.context.bootstrap.generator.bean;
 
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import com.squareup.javapoet.CodeBlock;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.context.bootstrap.generator.sample.dependency.DependencyConfiguration;
+import org.springframework.context.bootstrap.generator.sample.dependency.GenericDependencyConfiguration;
 import org.springframework.context.bootstrap.generator.sample.factory.SampleFactory;
 import org.springframework.util.ReflectionUtils;
 
@@ -84,6 +87,30 @@ class MethodBeanValueWriterTests {
 		Method method = ReflectionUtils.findMethod(SampleFactory.class, "create", Class.class);
 		assertGeneratedCode(beanDefinition, method,
 				(code) -> assertThat(code).endsWith("SampleFactory.create(java.lang.String.class)"));
+	}
+
+	@Test
+	void writeParameterWithWildcard() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(GenericDependencyConfiguration.class.getName())
+				.setFactoryMethod("injectWildcard").getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(GenericDependencyConfiguration.class, "injectWildcard", Predicate.class);
+		assertGeneratedCode(beanDefinition, method,
+				(code) -> assertThat(code).containsSubsequence(
+						"() -> {",
+						"ObjectProvider<java.util.function.Predicate<?>> predicateProvider = context.getBeanProvider(org.springframework.core.ResolvableType.forClassWithGenerics(java.util.function.Predicate.class, java.lang.Object.class));",
+						"return context.getBean(org.springframework.context.bootstrap.generator.sample.dependency.GenericDependencyConfiguration.class).injectWildcard(predicateProvider.getObject());"));
+	}
+
+	@Test
+	void writeParameterWithListOfGeneric() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(GenericDependencyConfiguration.class.getName())
+				.setFactoryMethod("injectWildcardCollection").getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(GenericDependencyConfiguration.class, "injectWildcardCollection", Collection.class);
+		assertGeneratedCode(beanDefinition, method,
+				(code) -> assertThat(code).containsSubsequence(
+						"() -> {",
+						"org.springframework.beans.factory.ObjectProvider<java.util.function.Predicate<?>> collectionPredicateProvider = context.getBeanProvider(org.springframework.core.ResolvableType.forClassWithGenerics(java.util.function.Predicate.class, java.lang.Object.class));",
+						"return context.getBean(org.springframework.context.bootstrap.generator.sample.dependency.GenericDependencyConfiguration.class).injectWildcardCollection(collectionPredicateProvider.orderedStream().collect(java.util.stream.Collectors.toList()));"));
 	}
 
 	private void assertGeneratedCode(BeanDefinition beanDefinition, Method method, Consumer<String> code) {
