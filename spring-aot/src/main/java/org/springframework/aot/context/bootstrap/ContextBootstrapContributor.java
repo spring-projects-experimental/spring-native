@@ -26,6 +26,8 @@ import org.springframework.aot.BootstrapContributor;
 import org.springframework.aot.BuildContext;
 import org.springframework.aot.SourceFiles;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
+import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
 import org.springframework.context.annotation.BuildTimeBeanDefinitionsRegistrar;
 import org.springframework.context.bootstrap.generator.ContextBootstrapGenerator;
 import org.springframework.context.support.GenericApplicationContext;
@@ -37,8 +39,16 @@ import org.springframework.util.ClassUtils;
 
 /**
  * @author Brian Clozel
+ * @author Sebastien Deleuze
  */
 public class ContextBootstrapContributor implements BootstrapContributor {
+
+	// Copied from Spring Boot WebApplicationType
+	private static final String[] SERVLET_INDICATOR_CLASSES = { "javax.servlet.Servlet",
+			"org.springframework.web.context.ConfigurableWebApplicationContext" };
+	private static final String WEBMVC_INDICATOR_CLASS = "org.springframework.web.servlet.DispatcherServlet";
+	private static final String WEBFLUX_INDICATOR_CLASS = "org.springframework.web.reactive.DispatcherHandler";
+	private static final String JERSEY_INDICATOR_CLASS = "org.glassfish.jersey.servlet.ServletContainer";
 
 	private static Log logger = LogFactory.getLog(ContextBootstrapContributor.class);
 
@@ -48,7 +58,7 @@ public class ContextBootstrapContributor implements BootstrapContributor {
 		ClassLoader classLoader = typeSystem.getResourceLoader().getClassLoader();
 
 		// TODO: detect correct type of application context
-		GenericApplicationContext applicationContext = new GenericApplicationContext();
+		GenericApplicationContext applicationContext = createApplicationContext(typeSystem);
 		applicationContext.setResourceLoader(typeSystem.getResourceLoader());
 
 		// TODO: pre-compute environment from properties?
@@ -67,5 +77,35 @@ public class ContextBootstrapContributor implements BootstrapContributor {
 		ContextBootstrapGenerator bootstrapGenerator = new ContextBootstrapGenerator(classLoader);
 		List<JavaFile> javaFiles = bootstrapGenerator.generateBootstrapClass(beanFactory, "org.springframework.aot");
 		javaFiles.forEach(javaFile -> context.addSourceFiles(SourceFiles.fromJavaFile(javaFile)));
+	}
+
+	// TODO Avoid duplication with WebApplicationType and SpringAotApplication.AOT_FACTORY
+	private GenericApplicationContext createApplicationContext(TypeSystem typeSystem) {
+		if (typeSystem.resolveClass(WEBFLUX_INDICATOR_CLASS) != null && typeSystem.resolveClass(WEBMVC_INDICATOR_CLASS) == null
+				&& typeSystem.resolveClass(JERSEY_INDICATOR_CLASS) == null) {
+			return ReactiveContextDelegate.createApplicationContext();
+		}
+		for (String className : SERVLET_INDICATOR_CLASSES) {
+			if (typeSystem.resolveClass(className) == null) {
+				return new GenericApplicationContext();
+			}
+		}
+		return ServletContextDelegate.createApplicationContext();
+	}
+
+	// To avoid NoClassDefFoundError:
+	static class ServletContextDelegate {
+
+		public static GenericApplicationContext createApplicationContext() {
+			return new ServletWebServerApplicationContext();
+		}
+	}
+
+	// To avoid NoClassDefFoundError:
+	static class ReactiveContextDelegate {
+
+		public static GenericApplicationContext createApplicationContext() {
+			return new ReactiveWebServerApplicationContext();
+		}
 	}
 }
