@@ -24,12 +24,17 @@ import java.util.function.Predicate;
 
 import org.junit.jupiter.api.Test;
 
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.bootstrap.generator.sample.SimpleConfiguration;
 import org.springframework.context.bootstrap.generator.sample.dependency.DependencyConfiguration;
 import org.springframework.context.bootstrap.generator.sample.dependency.GenericDependencyConfiguration;
 import org.springframework.context.bootstrap.generator.sample.factory.SampleFactory;
 import org.springframework.context.bootstrap.generator.test.CodeSnippet;
+import org.springframework.core.env.Environment;
 import org.springframework.util.ReflectionUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,21 +47,49 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MethodBeanValueWriterTests {
 
 	@Test
-	void writeParameterWithRuntimeBeanReference() {
-		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(SampleFactory.class.getName())
-				.setFactoryMethod("create").addConstructorArgReference("testBean").getBeanDefinition();
-		Method method = ReflectionUtils.findMethod(SampleFactory.class, "create", String.class);
+	void writeParameterWithNoDependency() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(SimpleConfiguration.class)
+				.setFactoryMethod("integerBean").getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(SimpleConfiguration.class, "integerBean");
 		assertThat(generateCode(beanDefinition, method)).isEqualTo(
-				"() -> SampleFactory.create(context.getBean(\"testBean\", String.class))");
+				"() -> context.getBean(SimpleConfiguration.class).integerBean()");
 	}
 
 	@Test
-	void writeParameterWithCharacterReferenceEscapeSpecialChar() {
-		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(SampleFactory.class.getName())
-				.setFactoryMethod("create").addConstructorArgValue('\\').getBeanDefinition();
-		Method method = ReflectionUtils.findMethod(SampleFactory.class, "create", char.class);
+	void writeParameterWithDependencyOnEnvironment() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(DependencyConfiguration.class)
+				.setFactoryMethod("injectEnvironment").getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(DependencyConfiguration.class, "injectEnvironment", Environment.class);
 		assertThat(generateCode(beanDefinition, method)).isEqualTo(
-				"() -> SampleFactory.create('\\\\')");
+				"() -> context.getBean(DependencyConfiguration.class).injectEnvironment(context.getEnvironment())");
+	}
+
+	@Test
+	void writeParameterWithDependencyOnApplicationContext() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(DependencyConfiguration.class)
+				.setFactoryMethod("injectContext").getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(DependencyConfiguration.class, "injectContext", ConfigurableApplicationContext.class);
+		assertThat(generateCode(beanDefinition, method)).isEqualTo(
+				"() -> context.getBean(DependencyConfiguration.class).injectContext(context)");
+	}
+
+	@Test
+	void writeParameterWithDependencyOnBeanFactory() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(DependencyConfiguration.class)
+				.setFactoryMethod("injectBeanFactory").getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(DependencyConfiguration.class, "injectBeanFactory", AutowireCapableBeanFactory.class);
+		assertThat(generateCode(beanDefinition, method)).isEqualTo(
+				"() -> context.getBean(DependencyConfiguration.class).injectBeanFactory(context.getBeanFactory())");
+	}
+
+	@Test
+	void writeParameterWithDependencyOnObjectProvider() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(DependencyConfiguration.class)
+				.setFactoryMethod("injectObjectProvider").getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(DependencyConfiguration.class, "injectObjectProvider", ObjectProvider.class);
+		assertThat(generateCode(beanDefinition, method)).isEqualTo(
+				"() -> context.getBean(DependencyConfiguration.class).injectObjectProvider("
+						+ "context.getBeanProvider(ResolvableType.forClassWithGenerics(Repository.class, Integer.class)))");
 	}
 
 	@Test
@@ -79,6 +112,24 @@ class MethodBeanValueWriterTests {
 		assertThat(generateCode(beanDefinition, method)).containsSequence(
 				"() -> context.getBean(DependencyConfiguration.class)",
 				".injectSet(context.getBeanProvider(String.class).orderedStream().collect(Collectors.toSet()))");
+	}
+
+	@Test
+	void writeParameterWithRuntimeBeanReference() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(SampleFactory.class.getName())
+				.setFactoryMethod("create").addConstructorArgReference("testBean").getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(SampleFactory.class, "create", String.class);
+		assertThat(generateCode(beanDefinition, method)).isEqualTo(
+				"() -> SampleFactory.create(context.getBean(\"testBean\", String.class))");
+	}
+
+	@Test
+	void writeParameterWithCharacterReferenceEscapeSpecialChar() {
+		BeanDefinition beanDefinition = BeanDefinitionBuilder.rootBeanDefinition(SampleFactory.class.getName())
+				.setFactoryMethod("create").addConstructorArgValue('\\').getBeanDefinition();
+		Method method = ReflectionUtils.findMethod(SampleFactory.class, "create", char.class);
+		assertThat(generateCode(beanDefinition, method)).isEqualTo(
+				"() -> SampleFactory.create('\\\\')");
 	}
 
 	@Test

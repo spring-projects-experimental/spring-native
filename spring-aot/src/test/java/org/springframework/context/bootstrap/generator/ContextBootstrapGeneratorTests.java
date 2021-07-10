@@ -27,7 +27,6 @@ import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAut
 import org.springframework.boot.autoconfigure.info.ProjectInfoAutoConfiguration;
 import org.springframework.context.bootstrap.generator.sample.SimpleConfiguration;
 import org.springframework.context.bootstrap.generator.sample.autoconfigure.AutoConfigurationPackagesConfiguration;
-import org.springframework.context.bootstrap.generator.sample.dependency.DependencyConfiguration;
 import org.springframework.context.bootstrap.generator.sample.exception.ExceptionConfiguration;
 import org.springframework.context.bootstrap.generator.sample.exception.ExceptionConstructorConfiguration;
 import org.springframework.context.bootstrap.generator.sample.generic.GenericConfiguration;
@@ -106,41 +105,6 @@ class ContextBootstrapGeneratorTests {
 				+ "\"org.springframework.boot.context.properties.EnableConfigurationPropertiesRegistrar.methodValidationExcludeFilter\", "
 				+ "MethodValidationExcludeFilter.class, "
 				+ "() -> MethodValidationExcludeFilter.byAnnotation(ConfigurationProperties.class), BeanDefinitionCustomizers.role(2));");
-	}
-
-	@Test
-	void bootstrapClassWithDependencyOnEnvironment() {
-		ContextBootstrapStructure structure = this.generatorTester.generate(DependencyConfiguration.class);
-		assertThat(structure).contextBootstrap().contains(
-				"context.registerBean(\"injectEnvironment\", String.class, () -> context.getBean(DependencyConfiguration.class).injectEnvironment(context.getEnvironment()));");
-	}
-
-	@Test
-	void bootstrapClassWithDependencyOnApplicationContext() {
-		ContextBootstrapStructure structure = this.generatorTester.generate(DependencyConfiguration.class);
-		assertThat(structure).contextBootstrap().contains(
-				"context.registerBean(\"injectContext\", String.class, () -> context.getBean(DependencyConfiguration.class).injectContext(context));");
-	}
-
-	@Test
-	void bootstrapClassWithDependencyOnBeanFactory() {
-		ContextBootstrapStructure structure = this.generatorTester.generate(DependencyConfiguration.class);
-		assertThat(structure).contextBootstrap().contains(
-				"context.registerBean(\"injectBeanFactory\", String.class, () -> context.getBean(DependencyConfiguration.class).injectBeanFactory(context.getBeanFactory()));");
-	}
-
-	@Test
-	void bootstrapClassWithDependencyOnObjectProvider() {
-		ContextBootstrapStructure structure = this.generatorTester.generate(DependencyConfiguration.class);
-		assertThat(structure).contextBootstrap().contains(
-				"context.registerBean(\"injectObjectProvider\", String.class, () -> context.getBean(DependencyConfiguration.class).injectObjectProvider(context.getBeanProvider(ResolvableType.forClassWithGenerics(Repository.class, Integer.class))));");
-	}
-
-	@Test
-	void bootstrapClassWithDependencyOnList() {
-		ContextBootstrapStructure structure = this.generatorTester.generate(DependencyConfiguration.class);
-		assertThat(structure).contextBootstrap().contains(
-				"context.registerBean(\"injectList\", Integer.class, () -> context.getBean(DependencyConfiguration.class).injectList(context.getBeanProvider(String.class).orderedStream().collect(Collectors.toList())));");
 	}
 
 	@Test
