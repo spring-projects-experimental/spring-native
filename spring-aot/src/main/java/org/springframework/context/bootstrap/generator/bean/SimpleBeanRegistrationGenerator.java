@@ -17,7 +17,6 @@
 package org.springframework.context.bootstrap.generator.bean;
 
 import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.MethodSpec.Builder;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
@@ -45,14 +44,12 @@ public class SimpleBeanRegistrationGenerator implements BeanRegistrationGenerato
 	}
 
 	@Override
-	public void writeBeanRegistration(Builder method) {
-		CodeBlock.Builder code = CodeBlock.builder();
+	public void writeBeanRegistration(CodeBlock.Builder code) {
 		code.add("context.registerBean($S, $T.class, ", this.beanName,
 				ClassUtils.getUserClass(this.beanDefinition.getResolvableType().toClass()));
 		this.beanValueWriter.writeValueSupplier(code);
 		handleBeanMetadata(code);
-		code.add(")"); // End of registerBean
-		method.addStatement(code.build());
+		code.addStatement(")"); // End of registerBean
 	}
 
 	private void handleBeanMetadata(CodeBlock.Builder code) {

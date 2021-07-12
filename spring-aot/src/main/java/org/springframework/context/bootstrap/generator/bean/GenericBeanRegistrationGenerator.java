@@ -19,7 +19,6 @@ package org.springframework.context.bootstrap.generator.bean;
 import javax.lang.model.SourceVersion;
 
 import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.MethodSpec;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.RootBeanDefinition;
@@ -49,23 +48,23 @@ public class GenericBeanRegistrationGenerator implements BeanRegistrationGenerat
 	}
 
 	@Override
-	public void writeBeanRegistration(MethodSpec.Builder method) {
+	public void writeBeanRegistration(CodeBlock.Builder code) {
 		ResolvableType beanType = this.beanDefinition.getResolvableType();
 		String beanId = getBeanIdentifier(this.beanName, beanType.toClass());
 		String variable = beanId + "BeanDef";
-		method.addStatement("$T $L = new RootBeanDefinition()", RootBeanDefinition.class, variable);
+		code.addStatement("$T $L = new RootBeanDefinition()", RootBeanDefinition.class, variable);
 		CodeBlock.Builder targetType = CodeBlock.builder();
 		targetType.add("$L.setTargetType(", variable);
 		TypeHelper.generateResolvableTypeFor(targetType, beanType);
 		targetType.add(")");
-		method.addStatement(targetType.build());
+		code.addStatement(targetType.build());
 		CodeBlock.Builder instanceSupplier = CodeBlock.builder();
 		instanceSupplier.add("$L.setInstanceSupplier(", variable);
 		this.beanValueWriter.writeValueSupplier(instanceSupplier);
 		instanceSupplier.add(")");
-		method.addStatement(instanceSupplier.build());
-		handleMetadata(method, variable);
-		method.addStatement("context.registerBeanDefinition($S, $L)", this.beanName, variable);
+		code.addStatement(instanceSupplier.build());
+		handleMetadata(code, variable);
+		code.addStatement("context.registerBeanDefinition($S, $L)", this.beanName, variable);
 	}
 
 	@Override
@@ -73,12 +72,12 @@ public class GenericBeanRegistrationGenerator implements BeanRegistrationGenerat
 		return this.beanValueWriter;
 	}
 
-	private void handleMetadata(MethodSpec.Builder method, String variable) {
+	private void handleMetadata(CodeBlock.Builder code, String variable) {
 		if (this.beanDefinition.isPrimary()) {
-			method.addStatement(customization(variable, CodeBlock.builder().add("primary()")));
+			code.addStatement(customization(variable, CodeBlock.builder().add("primary()")));
 		}
 		if (this.beanDefinition.getRole() != BeanDefinition.ROLE_APPLICATION) {
-			method.addStatement(
+			code.addStatement(
 					customization(variable, CodeBlock.builder().add("role($L)", this.beanDefinition.getRole())));
 		}
 	}

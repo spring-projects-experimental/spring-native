@@ -16,7 +16,7 @@
 
 package org.springframework.context.bootstrap.generator.bean;
 
-import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.CodeBlock;
 
 /**
  * Abstract how to register a bean in the context.
@@ -26,10 +26,10 @@ import com.squareup.javapoet.MethodSpec;
 public interface BeanRegistrationGenerator {
 
 	/**
-	 * Generate the necessary {@code statements} to generate a bean in the context.
-	 * @param method the method to use to add the registration statement(s)
+	 * Generate the necessary {@code statements} to register a bean in the context.
+	 * @param code the builder to use to add the registration statement(s)
 	 */
-	void writeBeanRegistration(MethodSpec.Builder method);
+	void writeBeanRegistration(CodeBlock.Builder code);
 
 	/**
 	 * Return the {@link BeanValueWriter} that this instance uses.

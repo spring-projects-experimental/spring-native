@@ -38,7 +38,6 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.bootstrap.generator.bean.BeanRegistrationGenerator;
 import org.springframework.context.bootstrap.generator.bean.BeanValueWriter;
@@ -107,6 +106,7 @@ public class ContextBootstrapGenerator {
 		ClassLoader classLoader = beanFactory.getBeanClassLoader();
 		MethodSpec.Builder method = MethodSpec.methodBuilder("initialize").addModifiers(Modifier.PUBLIC)
 				.addParameter(GenericApplicationContext.class, "context");
+		CodeBlock.Builder code = CodeBlock.builder();
 		String[] beanNames = beanFactory.getBeanDefinitionNames();
 		for (String beanName : beanNames) {
 			BeanDefinition beanDefinition = beanFactory.getMergedBeanDefinition(beanName);
@@ -116,7 +116,7 @@ public class ContextBootstrapGenerator {
 				if (beanRegistrationGenerator != null) {
 					BeanValueWriter beanValueWriter = beanRegistrationGenerator.getBeanValueWriter();
 					if (beanValueWriter.isAccessibleFrom(packageName)) {
-						beanRegistrationGenerator.writeBeanRegistration(method);
+						beanRegistrationGenerator.writeBeanRegistration(code);
 					}
 					else {
 						String protectedPackageName = beanValueWriter.getDeclaringType().getPackage().getName();
@@ -124,15 +124,14 @@ public class ContextBootstrapGenerator {
 								.computeIfAbsent(protectedPackageName, ProtectedBootstrapClass::new);
 						protectedBootstrapClass.addBeanRegistrationMethod(beanName, beanValueWriter.getType(),
 								beanRegistrationGenerator);
-						CodeBlock.Builder code = CodeBlock.builder();
 						ClassName protectedClassName = ClassName.get(protectedPackageName, "ContextBootstrap");
-						code.add("$T.$L(context)", protectedClassName,
+						code.addStatement("$T.$L(context)", protectedClassName,
 								ProtectedBootstrapClass.registerBeanMethodName(beanName, beanValueWriter.getType()));
-						method.addStatement(code.build());
 					}
 				}
 			}
 		}
+		method.addCode(code.build());
 		return method.build();
 	}
 

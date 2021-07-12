@@ -22,6 +22,7 @@ import java.util.List;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Modifier;
 
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeSpec;
@@ -55,7 +56,9 @@ public class ProtectedBootstrapClass {
 		MethodSpec.Builder method = MethodSpec.methodBuilder(registerBeanMethodName(beanName, type))
 				.addModifiers(Modifier.PUBLIC, Modifier.STATIC)
 				.addParameter(GenericApplicationContext.class, "context");
-		beanRegistrationGenerator.writeBeanRegistration(method);
+		CodeBlock.Builder code = CodeBlock.builder();
+		beanRegistrationGenerator.writeBeanRegistration(code);
+		method.addCode(code.build());
 		this.methods.add(method.build());
 	}
 
