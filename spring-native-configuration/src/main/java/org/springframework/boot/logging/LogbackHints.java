@@ -45,33 +45,35 @@ import org.springframework.nativex.type.NativeConfiguration;
 // TODO Send a PR to Logback to remove reflection usage in ch.qos.logback.classic.PatternLayout
 // TODO Initialize ch.qos.logback.classic.PatternLayout at build time?
 @NativeHint(types = {
-		@TypeHint(types = {
-				DateConverter.class,
-				LevelConverter.class,
-				LoggerConverter.class,
-				MessageConverter.class,
-				LineSeparatorConverter.class,
-				ThreadConverter.class,
-				MDCConverter.class,
-				ColorConverter.class,
-				WhitespaceThrowableProxyConverter.class,
-				ExtendedWhitespaceThrowableProxyConverter.class,
-				IntegerTokenConverter.class,
-				DateTokenConverter.class
-		}),
-		@TypeHint(types = {
-				PatternLayoutEncoder.class,
-				ConsoleAppender.class,
-				RollingFileAppender.class,
-				FixedWindowRollingPolicy.class,
-				SizeBasedTriggeringPolicy.class,
-				TimeBasedRollingPolicy.class,
-				SizeAndTimeBasedRollingPolicy.class,
-				FileSize.class
-		}, access = AccessBits.PUBLIC_CONSTRUCTORS | AccessBits.PUBLIC_METHODS)},
-		resources = {
-				@ResourceHint(patterns = "org/springframework/boot/logging/logback/defaults.xml"),
-				@ResourceHint(patterns = "org/springframework/boot/logging/logback/base.xml")
-		})
+        @TypeHint(types = {
+                DateConverter.class,
+                LevelConverter.class,
+                LoggerConverter.class,
+                MessageConverter.class,
+                LineSeparatorConverter.class,
+                ThreadConverter.class,
+                MDCConverter.class,
+                ColorConverter.class,
+                WhitespaceThrowableProxyConverter.class,
+                ExtendedWhitespaceThrowableProxyConverter.class,
+                IntegerTokenConverter.class,
+                DateTokenConverter.class
+        },
+                typeNames = "org.codehaus.janino.ScriptEvaluator"), // in case janino is present
+        @TypeHint(types = {
+                PatternLayoutEncoder.class,
+                ConsoleAppender.class,
+                RollingFileAppender.class,
+                FixedWindowRollingPolicy.class,
+                SizeBasedTriggeringPolicy.class,
+                TimeBasedRollingPolicy.class,
+                SizeAndTimeBasedRollingPolicy.class,
+                FileSize.class
+        }, access = AccessBits.PUBLIC_CONSTRUCTORS | AccessBits.PUBLIC_METHODS)},
+        resources = {
+                @ResourceHint(patterns = "org/springframework/boot/logging/logback/defaults.xml"),
+                @ResourceHint(patterns = "org/springframework/boot/logging/logback/console-appender.xml"),
+                @ResourceHint(patterns = "org/springframework/boot/logging/logback/file-appender.xml")
+        })
 public class LogbackHints implements NativeConfiguration {
 }
