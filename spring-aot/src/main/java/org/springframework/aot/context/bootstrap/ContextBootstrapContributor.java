@@ -26,8 +26,9 @@ import org.springframework.aot.BootstrapContributor;
 import org.springframework.aot.BuildContext;
 import org.springframework.aot.SourceFiles;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContext;
-import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
+import org.springframework.boot.web.reactive.context.AnnotationConfigReactiveWebServerApplicationContext;
+import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.BuildTimeBeanDefinitionsRegistrar;
 import org.springframework.context.bootstrap.generator.ContextBootstrapGenerator;
 import org.springframework.context.support.GenericApplicationContext;
@@ -50,7 +51,7 @@ public class ContextBootstrapContributor implements BootstrapContributor {
 	private static final String WEBFLUX_INDICATOR_CLASS = "org.springframework.web.reactive.DispatcherHandler";
 	private static final String JERSEY_INDICATOR_CLASS = "org.glassfish.jersey.servlet.ServletContainer";
 
-	private static Log logger = LogFactory.getLog(ContextBootstrapContributor.class);
+	private static final Log logger = LogFactory.getLog(ContextBootstrapContributor.class);
 
 	@Override
 	public void contribute(BuildContext context, AotOptions aotOptions) {
@@ -87,7 +88,7 @@ public class ContextBootstrapContributor implements BootstrapContributor {
 		}
 		for (String className : SERVLET_INDICATOR_CLASSES) {
 			if (typeSystem.resolveClass(className) == null) {
-				return new GenericApplicationContext();
+				return new AnnotationConfigApplicationContext();
 			}
 		}
 		return ServletContextDelegate.createApplicationContext();
@@ -97,7 +98,7 @@ public class ContextBootstrapContributor implements BootstrapContributor {
 	static class ServletContextDelegate {
 
 		public static GenericApplicationContext createApplicationContext() {
-			return new ServletWebServerApplicationContext();
+			return new AnnotationConfigServletWebServerApplicationContext();
 		}
 	}
 
@@ -105,7 +106,7 @@ public class ContextBootstrapContributor implements BootstrapContributor {
 	static class ReactiveContextDelegate {
 
 		public static GenericApplicationContext createApplicationContext() {
-			return new ReactiveWebServerApplicationContext();
+			return new AnnotationConfigReactiveWebServerApplicationContext();
 		}
 	}
 }
