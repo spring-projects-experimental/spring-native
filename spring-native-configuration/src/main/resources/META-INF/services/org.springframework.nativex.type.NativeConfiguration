@@ -1,3 +1,4 @@
+org.springframework.cloud.square.SquareHints
 org.springframework.scheduling.quartz.QuartzHints
 LoggingInitHints
 com.google.protobuf.ProtobufHints

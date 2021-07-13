@@ -98,6 +98,7 @@ NOTE: When using Spring Native, `spring.cloud.refresh.enabled` is set to `false`
 * `spring-cloud-starter-function-webflux`
 ** `--enable-https` flag is required for HTTPS support.
 * `spring-cloud-starter-sleuth`
+* `spring-cloud-square` build declarative, interface-declared, proxy-powered HTTP clients with OkHTTP and Retrofit 2.
 
 [[support-spring-data]]
 === Spring Data

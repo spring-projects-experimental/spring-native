@@ -1,0 +1,11 @@
+[
+  {
+    "name": "com.oracle.svm.core.hub.Target_java_lang_invoke_TypeDescriptor_OfField[]"
+  },
+  {
+    "name": "com.oracle.svm.core.hub.Target_java_lang_constant_Constable[]"
+  },
+  {
+    "name": "com.oracle.svm.core.hub.Target_java_lang_invoke_TypeDescriptor[]"
+  }
+]

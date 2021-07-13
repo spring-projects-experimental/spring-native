@@ -1,3 +1,4 @@
+org.springframework.cloud.square.SquareComponentProcessor
 org.springframework.SpringAtRepositoryComponentProcessor
 org.springframework.data.SpringDataComponentProcessor
 org.springframework.data.JpaComponentProcessor
@@ -9,3 +10,4 @@ org.springframework.TransactionalEventListenerComponentProcessor
 org.springframework.PrePostSecuredComponentProcessor
 org.springframework.ValidatedComponentProcessor
 org.springframework.kafka.KafkaComponentProcessor
+
