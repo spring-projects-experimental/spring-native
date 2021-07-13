@@ -29,7 +29,7 @@ public class SpringAotApplication extends SpringApplication {
 
 	private static final Log logger = LogFactory.getLog(SpringAotApplication.class);
 
-	private static boolean springAot = "true".equals(System.getProperty("springAot"))
+	private static final boolean springAot = "true".equals(System.getProperty("springAot"))
 			|| NativeDetector.inNativeImage();
 
 	ApplicationContextFactory AOT_FACTORY = (webApplicationType) -> {
