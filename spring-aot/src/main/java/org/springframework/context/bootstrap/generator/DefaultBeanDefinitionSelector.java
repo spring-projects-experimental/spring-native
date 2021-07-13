@@ -41,8 +41,7 @@ public class DefaultBeanDefinitionSelector implements BeanDefinitionSelector {
 		this.excludeTypes = new ArrayList<>(excludeTypes);
 		this.excludedBeanNames = new HashSet<>();
 		this.excludedBeanNames.add(AnnotationConfigUtils.CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME);
-		this.excludedBeanNames.add(AnnotationConfigUtils.EVENT_LISTENER_PROCESSOR_BEAN_NAME);
-		this.excludedBeanNames.add(AnnotationConfigUtils.EVENT_LISTENER_FACTORY_BEAN_NAME);
+		this.excludedBeanNames.add(AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR);
 
 		// See https://github.com/spring-projects/spring-data-commons/pull/2399
 		this.excludedBeanNames.add("projectingArgumentResolverBeanPostProcessor");
