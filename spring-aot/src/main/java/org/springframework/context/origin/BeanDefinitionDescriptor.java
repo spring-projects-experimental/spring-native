@@ -44,8 +44,14 @@ public final class BeanDefinitionDescriptor {
 		this.origins = origins;
 	}
 
-	public BeanDefinitionDescriptor(String beanName, BeanDefinition beanDefinition, Type type) {
-		this(beanName, beanDefinition, type, null);
+	/**
+	 * Create a {@link BeanDefinitionDescriptor} for the specified bean definition.
+	 * @param beanName the name of the bean
+	 * @param beanDefinition the definition of the bean
+	 * @return a unresolved descriptor
+	 */
+	public static BeanDefinitionDescriptor unresolved(String beanName, BeanDefinition beanDefinition) {
+		return new BeanDefinitionDescriptor(beanName, beanDefinition, Type.UNKNOWN, null);
 	}
 
 	/**
@@ -107,4 +113,5 @@ public final class BeanDefinitionDescriptor {
 		UNKNOWN
 
 	}
+
 }

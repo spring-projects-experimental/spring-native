@@ -24,7 +24,7 @@ class AutoConfigurationPackagesBeanDefinitionOriginAnalyzerTests {
 		GenericApplicationContext context = new GenericApplicationContext();
 		context.registerBean(SampleConfiguration.class);
 		new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
-		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(context.getBeanFactory());
+		BeanFactoryStructureAnalysis analysis = BeanFactoryStructureAnalysis.of(context.getBeanFactory());
 		this.analyzer.analyze(analysis);
 		assertThat(analysis.resolved()).singleElement().satisfies((processed) -> {
 			assertThat(processed.getType()).isEqualTo(Type.INFRASTRUCTURE);

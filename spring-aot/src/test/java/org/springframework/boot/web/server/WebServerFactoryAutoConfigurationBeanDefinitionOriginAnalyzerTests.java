@@ -23,7 +23,7 @@ class WebServerFactoryAutoConfigurationBeanDefinitionOriginAnalyzerTests {
 		GenericApplicationContext context = new AnnotationConfigServletWebApplicationContext();
 		context.registerBean(ServletWebServerFactoryAutoConfiguration.class);
 		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
-		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(registrar.processBeanDefinitions());
+		BeanFactoryStructureAnalysis analysis = BeanFactoryStructureAnalysis.of(registrar.processBeanDefinitions());
 		this.analyzer.analyze(analysis);
 		assertThat(analysis.resolved().filter((candidate) ->
 				WebServerFactoryCustomizerBeanPostProcessor.class.getName().equals(candidate.getBeanDefinition().getBeanClassName())))
@@ -38,7 +38,7 @@ class WebServerFactoryAutoConfigurationBeanDefinitionOriginAnalyzerTests {
 		GenericApplicationContext context = new AnnotationConfigServletWebApplicationContext();
 		context.registerBean(ServletWebServerFactoryAutoConfiguration.class);
 		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
-		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(registrar.processBeanDefinitions());
+		BeanFactoryStructureAnalysis analysis = BeanFactoryStructureAnalysis.of(registrar.processBeanDefinitions());
 		this.analyzer.analyze(analysis);
 		assertThat(analysis.resolved().filter((candidate) ->
 				ErrorPageRegistrarBeanPostProcessor.class.getName().equals(candidate.getBeanDefinition().getBeanClassName())))

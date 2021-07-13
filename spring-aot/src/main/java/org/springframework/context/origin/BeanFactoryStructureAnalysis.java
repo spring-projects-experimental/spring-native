@@ -35,7 +35,7 @@ public final class BeanFactoryStructureAnalysis {
 
 	private final Map<String, BeanDefinitionDescriptor> descriptors;
 
-	public BeanFactoryStructureAnalysis(ConfigurableListableBeanFactory beanFactory) {
+	private BeanFactoryStructureAnalysis(ConfigurableListableBeanFactory beanFactory) {
 		this.predicates = new BeanDefinitionDescriptorPredicates(beanFactory.getBeanClassLoader());
 		this.descriptors = initialize(beanFactory);
 	}
@@ -43,10 +43,14 @@ public final class BeanFactoryStructureAnalysis {
 	private static Map<String, BeanDefinitionDescriptor> initialize(ConfigurableListableBeanFactory beanFactory) {
 		Map<String, BeanDefinitionDescriptor> descriptors = new LinkedHashMap<>();
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
-			descriptors.put(beanName, new BeanDefinitionDescriptor(beanName,
-					beanFactory.getBeanDefinition(beanName), Type.UNKNOWN));
+			descriptors.put(beanName, BeanDefinitionDescriptor.unresolved(beanName,
+					beanFactory.getBeanDefinition(beanName)));
 		}
 		return descriptors;
+	}
+
+	public static BeanFactoryStructureAnalysis of(ConfigurableListableBeanFactory beanFactory) {
+		return new BeanFactoryStructureAnalysis(beanFactory);
 	}
 
 	public BeanDefinitionDescriptorPredicates getPredicates() {

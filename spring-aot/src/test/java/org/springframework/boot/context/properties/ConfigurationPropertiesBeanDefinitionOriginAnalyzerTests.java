@@ -32,7 +32,7 @@ class ConfigurationPropertiesBeanDefinitionOriginAnalyzerTests {
 		DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 		beanFactory.registerBeanDefinition("configuration", new RootBeanDefinition(SampleConfiguration.class));
 		beanFactory.registerBeanDefinition("configurationProperties", new RootBeanDefinition(SampleProperties.class));
-		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(beanFactory);
+		BeanFactoryStructureAnalysis analysis = BeanFactoryStructureAnalysis.of(beanFactory);
 		this.analyzer.analyze(analysis);
 		assertThat(analysis.resolved()).singleElement().satisfies((processed) -> {
 			assertThat(processed.getBeanDefinition()).isEqualTo(beanFactory.getBeanDefinition("configurationProperties"));
@@ -49,7 +49,7 @@ class ConfigurationPropertiesBeanDefinitionOriginAnalyzerTests {
 		GenericApplicationContext context = new GenericApplicationContext();
 		context.registerBean(SampleAutoConfiguration.class);
 		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
-		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(registrar.processBeanDefinitions());
+		BeanFactoryStructureAnalysis analysis = BeanFactoryStructureAnalysis.of(registrar.processBeanDefinitions());
 		this.analyzer.analyze(analysis);
 		assertThat(analysis.resolved()).hasSize(5);
 		HashSet<String> parents = analysis.resolved().map(BeanDefinitionDescriptor::getOrigins)

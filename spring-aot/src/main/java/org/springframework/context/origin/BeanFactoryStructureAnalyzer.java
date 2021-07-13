@@ -23,7 +23,7 @@ import org.springframework.core.io.support.SpringFactoriesLoader;
 import org.springframework.lang.Nullable;
 
 /**
- * Analyze the structure of  {@link ConfigurableListableBeanFactory bean factory}.
+ * Analyze the structure of a {@link ConfigurableListableBeanFactory bean factory}.
  *
  * @author Stephane Nicoll
  * @see BeanDefinitionOriginAnalyzer
@@ -56,7 +56,7 @@ public class BeanFactoryStructureAnalyzer {
 	 * @return the result of the analysis
 	 */
 	public BeanFactoryStructure analyze(ConfigurableListableBeanFactory beanFactory) {
-		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(beanFactory);
+		BeanFactoryStructureAnalysis analysis = BeanFactoryStructureAnalysis.of(beanFactory);
 		for (BeanDefinitionOriginAnalyzer locator : this.analyzers) {
 			locator.analyze(analysis);
 		}

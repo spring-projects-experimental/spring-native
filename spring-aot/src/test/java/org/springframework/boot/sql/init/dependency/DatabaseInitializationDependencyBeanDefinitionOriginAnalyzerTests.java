@@ -25,7 +25,7 @@ class DatabaseInitializationDependencyBeanDefinitionOriginAnalyzerTests {
 		GenericApplicationContext context = new GenericApplicationContext();
 		context.registerBean(SampleConfiguration.class);
 		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
-		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(registrar.processBeanDefinitions());
+		BeanFactoryStructureAnalysis analysis = BeanFactoryStructureAnalysis.of(registrar.processBeanDefinitions());
 		this.analyzer.analyze(analysis);
 		assertThat(analysis.resolved()).singleElement().satisfies((beanDefinition) -> {
 			assertThat(beanDefinition.getBeanDefinition().getBeanClassName())
