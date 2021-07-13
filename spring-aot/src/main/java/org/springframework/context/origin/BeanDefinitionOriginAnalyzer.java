@@ -29,7 +29,7 @@ public interface BeanDefinitionOriginAnalyzer {
 	/**
 	 * Analyze a {@link BeanFactory} structure using the specified
 	 * {@link BeanFactoryStructureAnalysis analysis}. Components that are detected should
-	 * be flagged using {@link BeanFactoryStructureAnalysis#markAsProcessed(BeanDefinitionOrigin)}
+	 * be flagged using {@link BeanFactoryStructureAnalysis#markAsResolved(BeanDefinitionDescriptor)}
 	 * @param analysis the current analysis
 	 */
 	@Nullable

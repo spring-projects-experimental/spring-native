@@ -17,39 +17,40 @@
 package org.springframework.context.origin;
 
 import java.io.PrintWriter;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.origin.BeanDefinitionOrigin.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptor.Type;
 
 /**
  * A hierarchical structure of a {@link BeanFactory}.
  *
  * @author Stephane Nicoll
- * @see BeanDefinitionOrigin
+ * @see BeanDefinitionDescriptor
  */
 public final class BeanFactoryStructure {
 
-	private final List<BeanDefinitionOrigin> beanDefinitions;
+	private final Map<String, BeanDefinitionDescriptor> descriptors;
 
-	private final List<BeanDefinition> other;
-
-	BeanFactoryStructure(List<BeanDefinitionOrigin> beanDefinitions,
-			List<BeanDefinition> other) {
-		this.beanDefinitions = beanDefinitions;
-		this.other = new ArrayList<>(other);
+	BeanFactoryStructure(Map<String, BeanDefinitionDescriptor> descriptors) {
+		this.descriptors = new LinkedHashMap<>(descriptors);
 	}
 
 	public void writeReport(PrintWriter writer) {
-		writer.println(String.format("%s configuration classes found", this.beanDefinitions.stream().filter((beanDefinition) ->
-				beanDefinition.getType().equals(Type.CONFIGURATION)).count()));
-		writer.println(String.format("%s components found", this.beanDefinitions.stream().filter((beanDefinition) ->
-				beanDefinition.getType().equals(Type.COMPONENT)).count()));
-		writer.println(String.format("%s bean definitions that have not been identified", this.other.size()));
-		for (BeanDefinition otherBeanDefinition : other) {
-			writer.println("\t" + otherBeanDefinition);
+		writer.println(String.format("%s configuration classes found", this.descriptors.values().stream().filter((descriptor) ->
+				descriptor.getType().equals(Type.CONFIGURATION)).count()));
+		writer.println(String.format("%s components found", this.descriptors.values().stream().filter((descriptor) ->
+				descriptor.getType().equals(Type.COMPONENT)).count()));
+		writer.println(String.format("%s infrastructure found", this.descriptors.values().stream().filter((descriptor) ->
+				descriptor.getType().equals(Type.INFRASTRUCTURE)).count()));
+		List<BeanDefinitionDescriptor> others = this.descriptors.values().stream().filter((descriptor) ->
+				descriptor.getType().equals(Type.UNKNOWN)).collect(Collectors.toList());
+		writer.println(String.format("%s bean definitions that have not been identified", others.size()));
+		for (BeanDefinitionDescriptor descriptor : others) {
+			writer.println("\t" + descriptor.getBeanDefinition());
 		}
 	}
 

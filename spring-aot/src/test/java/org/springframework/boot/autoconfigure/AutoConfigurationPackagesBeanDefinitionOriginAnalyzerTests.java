@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.context.annotation.BuildTimeBeanDefinitionsRegistrar;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.origin.BeanDefinitionOrigin.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptor.Type;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
 import org.springframework.context.support.GenericApplicationContext;
 
@@ -26,9 +26,12 @@ class AutoConfigurationPackagesBeanDefinitionOriginAnalyzerTests {
 		new BuildTimeBeanDefinitionsRegistrar(context).processBeanDefinitions();
 		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(context.getBeanFactory());
 		this.analyzer.analyze(analysis);
-		assertThat(analysis.processed()).singleElement().satisfies((processed) -> {
-			assertThat(processed.getType()).isEqualTo(Type.COMPONENT);
-			assertThat(processed.getOrigins()).singleElement().isEqualTo(context.getBeanDefinition(SampleConfiguration.class.getName()));
+		assertThat(analysis.resolved()).singleElement().satisfies((processed) -> {
+			assertThat(processed.getType()).isEqualTo(Type.INFRASTRUCTURE);
+			assertThat(processed.getOrigins()).singleElement().satisfies((parent) -> {
+				assertThat(context.containsBean(parent)).isTrue();
+				assertThat(context.getBeanDefinition(parent).getBeanClassName()).isEqualTo(SampleConfiguration.class.getName());
+			});
 		});
 	}
 

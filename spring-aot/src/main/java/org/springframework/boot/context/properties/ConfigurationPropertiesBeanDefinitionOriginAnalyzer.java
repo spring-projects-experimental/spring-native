@@ -7,13 +7,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter;
-import org.springframework.context.origin.BeanDefinitionOrigin;
-import org.springframework.context.origin.BeanDefinitionOrigin.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptor;
+import org.springframework.context.origin.BeanDefinitionDescriptor.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptorPredicates;
 import org.springframework.context.origin.BeanDefinitionOriginAnalyzer;
-import org.springframework.context.origin.BeanDefinitionPredicates;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.util.MultiValueMap;
@@ -24,37 +23,37 @@ import org.springframework.util.MultiValueMap;
  *
  * @author Stephane Nicoll
  */
-public final class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implements BeanDefinitionOriginAnalyzer {
+class ConfigurationPropertiesBeanDefinitionOriginAnalyzer implements BeanDefinitionOriginAnalyzer {
 
 	@Override
 	public void analyze(BeanFactoryStructureAnalysis analysis) {
-		BeanDefinitionPredicates predicates = analysis.getPredicates();
-		analysis.unprocessed().filter(predicates.annotatedWith(ConfigurationProperties.class.getName())).forEach((beanDefinition) -> {
-			BeanDefinitionOrigin origin = locateOrigin(analysis, beanDefinition);
+		BeanDefinitionDescriptorPredicates predicates = analysis.getPredicates();
+		analysis.unresolved().filter(predicates.annotatedWith(ConfigurationProperties.class.getName())).forEach((descriptor) -> {
+			BeanDefinitionDescriptor origin = resolveOrigin(analysis, descriptor);
 			if (origin != null) {
-				analysis.markAsProcessed(origin);
+				analysis.markAsResolved(origin);
 			}
 		});
 		// See EnableConfigurationPropertiesRegistrar - let's bind that to the auto-configuration
 		analysis.beanDefinitions().filter(predicates
 				.ofBeanClassName(ConfigurationPropertiesAutoConfiguration.class.getName())).findFirst().ifPresent((parent) ->
-				analysis.unprocessed().filter(predicates.ofBeanClassName(ConfigurationPropertiesBindingPostProcessor.class)
+				analysis.unresolved().filter(predicates.ofBeanClassName(ConfigurationPropertiesBindingPostProcessor.class)
 						.or(predicates.ofBeanClassName(MethodValidationExcludeFilter.class).or(predicates.ofBeanClassName(BoundConfigurationProperties.class)
 								.or(predicates.ofBeanClassName(ConfigurationPropertiesBinder.Factory.class.getName())
 										.or(predicates.ofBeanClassName(ConfigurationPropertiesBinder.class.getName()))))))
-						.forEach((beanDefinition) -> analysis.markAsProcessed(
-								new BeanDefinitionOrigin(beanDefinition, Type.COMPONENT, Collections.singleton(parent)))));
+						.forEach((descriptor) -> analysis.markAsResolved(
+								descriptor.resolve(Type.INFRASTRUCTURE, Collections.singleton(parent.getBeanName())))));
 	}
 
-	private BeanDefinitionOrigin locateOrigin(BeanFactoryStructureAnalysis analysis, BeanDefinition beanDefinition) {
-		Set<BeanDefinition> origins = new LinkedHashSet<>();
+	private BeanDefinitionDescriptor resolveOrigin(BeanFactoryStructureAnalysis analysis, BeanDefinitionDescriptor descriptor) {
+		Set<String> origins = new LinkedHashSet<>();
 		analysis.beanDefinitions().forEach((candidate) -> {
-			if (getConfigurationPropertiesClasses(analysis.getPredicates().getAnnotationMetadata(candidate))
-					.contains(beanDefinition.getBeanClassName())) {
-				origins.add(candidate);
+			if (getConfigurationPropertiesClasses(analysis.getPredicates().getAnnotationMetadata(candidate.getBeanDefinition()))
+					.contains(descriptor.getBeanDefinition().getBeanClassName())) {
+				origins.add(candidate.getBeanName());
 			}
 		});
-		return (!origins.isEmpty()) ? new BeanDefinitionOrigin(beanDefinition, Type.COMPONENT, origins) : null;
+		return (!origins.isEmpty()) ? descriptor.resolve(Type.COMPONENT, origins) : null;
 	}
 
 	@SuppressWarnings("unchecked")

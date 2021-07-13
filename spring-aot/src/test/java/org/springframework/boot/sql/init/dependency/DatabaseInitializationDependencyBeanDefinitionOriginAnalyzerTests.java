@@ -27,11 +27,13 @@ class DatabaseInitializationDependencyBeanDefinitionOriginAnalyzerTests {
 		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
 		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(registrar.processBeanDefinitions());
 		this.analyzer.analyze(analysis);
-		assertThat(analysis.processed()).singleElement().satisfies((beanDefinition) -> {
+		assertThat(analysis.resolved()).singleElement().satisfies((beanDefinition) -> {
 			assertThat(beanDefinition.getBeanDefinition().getBeanClassName())
 					.isEqualTo(DependsOnDatabaseInitializationPostProcessor.class.getName());
-			assertThat(beanDefinition.getOrigins()).singleElement().satisfies((origin) ->
-					assertThat(origin.getBeanClassName()).isEqualTo(SampleConfiguration.class.getName()));
+			assertThat(beanDefinition.getOrigins()).singleElement().satisfies((parent) -> {
+				assertThat(context.containsBean(parent)).isTrue();
+				assertThat(context.getBeanDefinition(parent).getBeanClassName()).isEqualTo(SampleConfiguration.class.getName());
+			});
 		});
 
 	}

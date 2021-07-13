@@ -22,44 +22,49 @@ import java.util.function.Predicate;
 
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.origin.BeanDefinitionDescriptor.Type;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.lang.Nullable;
 
 /**
- * Useful stream operators on {@link BeanDefinition}.
+ * Useful stream operators on {@link BeanDefinitionDescriptor}.
  *
  * @author Stephane Nicoll
  */
-public class BeanDefinitionPredicates {
+public class BeanDefinitionDescriptorPredicates {
 
 	private final MetadataReaderFactory metadataReaderFactory;
 
-	public BeanDefinitionPredicates(ClassLoader classLoader) {
+	public BeanDefinitionDescriptorPredicates(ClassLoader classLoader) {
 		this.metadataReaderFactory = new CachingMetadataReaderFactory(classLoader);
 	}
 
-	public Predicate<BeanDefinition> ofBeanClassName(String className) {
-		return (candidate) -> className.equals(candidate.getBeanClassName());
+	public Predicate<BeanDefinitionDescriptor> ofType(Type type) {
+		return (candidate) -> candidate.getType() == type;
 	}
 
-	public Predicate<BeanDefinition> ofBeanClassName(Class<?> type) {
+	public Predicate<BeanDefinitionDescriptor> ofBeanClassName(String className) {
+		return (candidate) -> className.equals(candidate.getBeanDefinition().getBeanClassName());
+	}
+
+	public Predicate<BeanDefinitionDescriptor> ofBeanClassName(Class<?> type) {
 		return ofBeanClassName(type.getName());
 	}
 
-	public Predicate<BeanDefinition> annotationMatching(Predicate<AnnotationMetadata> annotationState) {
+	public Predicate<BeanDefinitionDescriptor> annotationMatching(Predicate<AnnotationMetadata> annotationState) {
 		return (candidate) -> {
-			AnnotationMetadata metadata = getAnnotationMetadata(candidate);
+			AnnotationMetadata metadata = getAnnotationMetadata(candidate.getBeanDefinition());
 			return (metadata != null && annotationState.test(metadata));
 		};
 	}
 
-	public Predicate<BeanDefinition> annotatedWith(String annotationName) {
+	public Predicate<BeanDefinitionDescriptor> annotatedWith(String annotationName) {
 		return annotationMatching((metadata) -> metadata.isAnnotated(annotationName));
 	}
 
-	public Predicate<BeanDefinition> annotatedWith(Class<? extends Annotation> annotationType) {
+	public Predicate<BeanDefinitionDescriptor> annotatedWith(Class<? extends Annotation> annotationType) {
 		return annotatedWith(annotationType.getName());
 	}
 

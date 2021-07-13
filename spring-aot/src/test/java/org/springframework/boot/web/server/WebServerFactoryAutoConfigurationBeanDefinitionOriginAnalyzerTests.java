@@ -25,9 +25,12 @@ class WebServerFactoryAutoConfigurationBeanDefinitionOriginAnalyzerTests {
 		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
 		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(registrar.processBeanDefinitions());
 		this.analyzer.analyze(analysis);
-		assertThat(analysis.processed().filter((candidate) ->
+		assertThat(analysis.resolved().filter((candidate) ->
 				WebServerFactoryCustomizerBeanPostProcessor.class.getName().equals(candidate.getBeanDefinition().getBeanClassName())))
-				.singleElement().satisfies((origin) -> assertThat(origin.getOrigins()).singleElement().satisfies((parent) -> assertThat(parent.getBeanClassName()).isEqualTo(ServletWebServerFactoryAutoConfiguration.class.getName())));
+				.singleElement().satisfies((origin) -> assertThat(origin.getOrigins()).singleElement().satisfies((parent) -> {
+			assertThat(context.containsBean(parent)).isTrue();
+			assertThat(context.getBeanDefinition(parent).getBeanClassName()).isEqualTo(ServletWebServerFactoryAutoConfiguration.class.getName());
+		}));
 	}
 
 	@Test
@@ -37,9 +40,12 @@ class WebServerFactoryAutoConfigurationBeanDefinitionOriginAnalyzerTests {
 		BuildTimeBeanDefinitionsRegistrar registrar = new BuildTimeBeanDefinitionsRegistrar(context);
 		BeanFactoryStructureAnalysis analysis = new BeanFactoryStructureAnalysis(registrar.processBeanDefinitions());
 		this.analyzer.analyze(analysis);
-		assertThat(analysis.processed().filter((candidate) ->
+		assertThat(analysis.resolved().filter((candidate) ->
 				ErrorPageRegistrarBeanPostProcessor.class.getName().equals(candidate.getBeanDefinition().getBeanClassName())))
-				.singleElement().satisfies((origin) -> assertThat(origin.getOrigins()).singleElement().satisfies((parent) -> assertThat(parent.getBeanClassName()).isEqualTo(ServletWebServerFactoryAutoConfiguration.class.getName())));
+				.singleElement().satisfies((origin) -> assertThat(origin.getOrigins()).singleElement().satisfies((parent) -> {
+			assertThat(context.containsBean(parent)).isTrue();
+			assertThat(context.getBeanDefinition(parent).getBeanClassName()).isEqualTo(ServletWebServerFactoryAutoConfiguration.class.getName());
+		}));
 	}
 
 }

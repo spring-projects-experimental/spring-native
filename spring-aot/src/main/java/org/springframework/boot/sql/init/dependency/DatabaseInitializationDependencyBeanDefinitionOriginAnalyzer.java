@@ -5,13 +5,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.sql.init.dependency.DatabaseInitializationDependencyConfigurer.DependsOnDatabaseInitializationPostProcessor;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.origin.BeanDefinitionOrigin;
-import org.springframework.context.origin.BeanDefinitionOrigin.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptor;
+import org.springframework.context.origin.BeanDefinitionDescriptor.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptorPredicates;
 import org.springframework.context.origin.BeanDefinitionOriginAnalyzer;
-import org.springframework.context.origin.BeanDefinitionPredicates;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.MultiValueMap;
@@ -26,12 +25,12 @@ class DatabaseInitializationDependencyBeanDefinitionOriginAnalyzer implements Be
 
 	@Override
 	public void analyze(BeanFactoryStructureAnalysis analysis) {
-		BeanDefinitionPredicates predicates = analysis.getPredicates();
-		analysis.unprocessed().filter(predicates.ofBeanClassName(DependsOnDatabaseInitializationPostProcessor.class))
+		BeanDefinitionDescriptorPredicates predicates = analysis.getPredicates();
+		analysis.unresolved().filter(predicates.ofBeanClassName(DependsOnDatabaseInitializationPostProcessor.class))
 				.findAny().ifPresent((candidate) -> {
-			Set<BeanDefinition> origins = analysis.beanDefinitions()
-					.filter(predicates.annotationMatching(this::hasImport)).collect(Collectors.toSet());
-			analysis.markAsProcessed(new BeanDefinitionOrigin(candidate, Type.COMPONENT, origins));
+			Set<String> origins = analysis.beanDefinitions()
+					.filter(predicates.annotationMatching(this::hasImport)).map(BeanDefinitionDescriptor::getBeanName).collect(Collectors.toSet());
+			analysis.markAsResolved(candidate.resolve(Type.INFRASTRUCTURE, origins));
 		});
 	}
 

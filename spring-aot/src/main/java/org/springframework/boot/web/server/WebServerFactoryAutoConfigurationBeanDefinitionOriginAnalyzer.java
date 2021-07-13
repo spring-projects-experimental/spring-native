@@ -3,11 +3,10 @@ package org.springframework.boot.web.server;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.origin.BeanDefinitionOrigin;
-import org.springframework.context.origin.BeanDefinitionOrigin.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptor;
+import org.springframework.context.origin.BeanDefinitionDescriptor.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptorPredicates;
 import org.springframework.context.origin.BeanDefinitionOriginAnalyzer;
-import org.springframework.context.origin.BeanDefinitionPredicates;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
 
 /**
@@ -19,14 +18,15 @@ class WebServerFactoryAutoConfigurationBeanDefinitionOriginAnalyzer implements B
 
 	@Override
 	public void analyze(BeanFactoryStructureAnalysis analysis) {
-		BeanDefinitionPredicates predicates = analysis.getPredicates();
-		analysis.unprocessed().filter(predicates.ofBeanClassName(WebServerFactoryCustomizerBeanPostProcessor.class)
+		BeanDefinitionDescriptorPredicates predicates = analysis.getPredicates();
+		analysis.unresolved().filter(predicates.ofBeanClassName(WebServerFactoryCustomizerBeanPostProcessor.class)
 				.or(predicates.ofBeanClassName(ErrorPageRegistrarBeanPostProcessor.class))).forEach((candidate) -> {
-			Set<BeanDefinition> origins = analysis.beanDefinitions()
+			Set<String> origins = analysis.beanDefinitions()
 					.filter(predicates.ofBeanClassName("org.springframework.boot.autoconfigure.web.servlet.ServletWebServerFactoryAutoConfiguration")
 							.or(predicates.ofBeanClassName("org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryAutoConfiguration")))
+					.map(BeanDefinitionDescriptor::getBeanName)
 					.collect(Collectors.toSet());
-			analysis.markAsProcessed(new BeanDefinitionOrigin(candidate, Type.COMPONENT, origins));
+			analysis.markAsResolved(candidate.resolve(Type.INFRASTRUCTURE, origins));
 		});
 	}
 

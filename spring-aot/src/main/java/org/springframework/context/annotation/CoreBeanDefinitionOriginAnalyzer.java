@@ -20,10 +20,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.origin.BeanDefinitionOrigin;
-import org.springframework.context.origin.BeanDefinitionOrigin.Type;
+import org.springframework.context.origin.BeanDefinitionDescriptor;
+import org.springframework.context.origin.BeanDefinitionDescriptor.Type;
 import org.springframework.context.origin.BeanDefinitionOriginAnalyzer;
 import org.springframework.context.origin.BeanFactoryStructureAnalysis;
 import org.springframework.core.Ordered;
@@ -42,63 +43,64 @@ public class CoreBeanDefinitionOriginAnalyzer implements BeanDefinitionOriginAna
 
 	@Override
 	public void analyze(BeanFactoryStructureAnalysis analysis) {
-		analysis.unprocessed(ConfigurationClassBeanDefinition.class).forEach((configurationBeanDefinition) -> {
-			BeanDefinitionOrigin origin = lookup(analysis, configurationBeanDefinition);
-			analysis.markAsProcessed(origin);
-		});
-		analysis.unprocessed(BeanMethodBeanDefinition.class).forEach((beanMethodBeanDefinition) -> {
-			BeanDefinitionOrigin origin = lookup(analysis, beanMethodBeanDefinition);
-			analysis.markAsProcessed(origin);
-		});
-		analysis.unprocessed().forEach((beanDefinition) -> {
-			boolean usedAsParent = analysis.processed().map(BeanDefinitionOrigin::getOrigins)
-					.flatMap(Collection::stream).anyMatch((candidate) -> candidate.equals(beanDefinition));
+		analysis.unresolved().filter(ofBeanDefinitionType(ConfigurationClassBeanDefinition.class))
+				.forEach((descriptor) -> analysis.markAsResolved(resolveConfigurationClass(analysis, descriptor)));
+		analysis.unresolved().filter(ofBeanDefinitionType(BeanMethodBeanDefinition.class))
+				.forEach((descriptor) -> analysis.markAsResolved(resolveBeanMethod(analysis, descriptor)));
+		analysis.unresolved().forEach((descriptor) -> {
+			boolean usedAsParent = analysis.resolved().map(BeanDefinitionDescriptor::getOrigins)
+					.flatMap(Collection::stream).anyMatch((candidate) -> candidate.equals(descriptor.getBeanName()));
 			if (usedAsParent) {
-				analysis.markAsProcessed(new BeanDefinitionOrigin(beanDefinition, Type.CONFIGURATION, Collections.emptySet()));
+				analysis.markAsResolved(descriptor.resolve(Type.CONFIGURATION, Collections.emptySet()));
 			}
 		});
 	}
 
-	private BeanDefinitionOrigin lookup(BeanFactoryStructureAnalysis analysis,
-			ConfigurationClassBeanDefinition beanDefinition) {
-		Set<BeanDefinition> origins = new LinkedHashSet<>();
-		for (ConfigurationClass parentConfigurationClass : beanDefinition.getConfigurationClass().getImportedBy()) {
-			BeanDefinition parent = findBeanDefinition(analysis, parentConfigurationClass);
-			if (parent == null) {
+	private BeanDefinitionDescriptor resolveConfigurationClass(BeanFactoryStructureAnalysis analysis, BeanDefinitionDescriptor descriptor) {
+		Set<String> origins = new LinkedHashSet<>();
+		ConfigurationClass configurationClass = ((ConfigurationClassBeanDefinition) descriptor.getBeanDefinition()).getConfigurationClass();
+		for (ConfigurationClass parentConfigurationClass : configurationClass.getImportedBy()) {
+			String parentName = findBeanDefinitionName(analysis, parentConfigurationClass);
+			if (parentName == null) {
 				throw new IllegalStateException("No bean definition found for " + parentConfigurationClass);
 			}
-			origins.add(parent);
+			origins.add(parentName);
 		}
-		return new BeanDefinitionOrigin(beanDefinition, Type.CONFIGURATION, origins);
+		return descriptor.resolve(Type.CONFIGURATION, origins);
 	}
 
-	private BeanDefinitionOrigin lookup(BeanFactoryStructureAnalysis analysis,
-			BeanMethodBeanDefinition beanDefinition) {
-		ConfigurationClass configurationClass = beanDefinition.getBeanMethod().getConfigurationClass();
-		BeanDefinition configurationClassBeanDef = findBeanDefinition(analysis, configurationClass);
+	private BeanDefinitionDescriptor resolveBeanMethod(BeanFactoryStructureAnalysis analysis, BeanDefinitionDescriptor descriptor) {
+		ConfigurationClass configurationClass = ((BeanMethodBeanDefinition) descriptor.getBeanDefinition())
+				.getBeanMethod().getConfigurationClass();
+		String configurationClassBeanDef = findBeanDefinitionName(analysis, configurationClass);
 		if (configurationClassBeanDef == null) {
 			throw new IllegalStateException("No bean definition found for " + configurationClass);
 		}
-		return new BeanDefinitionOrigin(beanDefinition, Type.COMPONENT, Collections.singleton(configurationClassBeanDef));
+		return descriptor.resolve(Type.COMPONENT, Collections.singleton(configurationClassBeanDef));
 	}
 
 	/**
-	 * Find a {@link BeanDefinition} that matches the specified {@link ConfigurationClass}.
-	 * @return a bean definition for the specified {@link ConfigurationClass}
+	 * Find a {@link BeanDefinition} name that matches the specified {@link ConfigurationClass}.
+	 * @return a bean definition name for the specified {@link ConfigurationClass}
 	 */
 	@Nullable
-	private BeanDefinition findBeanDefinition(BeanFactoryStructureAnalysis analysis, ConfigurationClass configurationClass) {
-		ConfigurationClassBeanDefinition match = analysis.beanDefinitions(ConfigurationClassBeanDefinition.class)
-				.filter((beanDefinition) -> beanDefinition.getConfigurationClass().equals(configurationClass))
+	private String findBeanDefinitionName(BeanFactoryStructureAnalysis analysis,
+			ConfigurationClass configurationClass) {
+		BeanDefinitionDescriptor match = analysis.beanDefinitions().filter(ofBeanDefinitionType(ConfigurationClassBeanDefinition.class))
+				.filter((descriptor) -> ((ConfigurationClassBeanDefinition) descriptor.getBeanDefinition()).getConfigurationClass().equals(configurationClass))
 				.findAny().orElse(null);
 		if (match != null) {
-			return match;
+			return match.getBeanName();
 		}
 		String targetClassName = configurationClass.getMetadata().getClassName();
 		return analysis.beanDefinitions().filter((candidate) -> {
-			Class<?> target = candidate.getResolvableType().resolve();
+			Class<?> target = candidate.getBeanDefinition().getResolvableType().resolve();
 			return target != null && ClassUtils.getUserClass(target).getName().equals(targetClassName);
-		}).findAny().orElse(null);
+		}).findAny().map(BeanDefinitionDescriptor::getBeanName).orElse(null);
+	}
+
+	private Predicate<BeanDefinitionDescriptor> ofBeanDefinitionType(Class<? extends BeanDefinition> type) {
+		return (candidate) -> type.isInstance(candidate.getBeanDefinition());
 	}
 
 }
