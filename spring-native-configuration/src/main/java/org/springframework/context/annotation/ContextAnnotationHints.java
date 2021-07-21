@@ -57,10 +57,10 @@ import org.springframework.nativex.hint.AccessBits;
 				AnnotationScopeMetadataResolver.class,
 				EventListenerMethodProcessor.class,
 				DefaultEventListenerFactory.class,
-				}),
+				}, access=AccessBits.SKIP_FOR_NATIVE_NEXT),
 		@TypeHint(types= ComponentScan.Filter.class, access = AccessBits.CLASS | AccessBits.DECLARED_METHODS),
 		@TypeHint(types = { ConfigurationClassPostProcessor.class },
-				methods = @MethodHint(name="setMetadataReaderFactory", parameterTypes = MetadataReaderFactory.class)
+				methods = @MethodHint(name="setMetadataReaderFactory", parameterTypes = MetadataReaderFactory.class), access = AccessBits.SKIP_FOR_NATIVE_NEXT
 		),
 		@TypeHint(types= ApplicationContext.class, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.RESOURCE)
 })

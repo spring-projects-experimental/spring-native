@@ -45,10 +45,10 @@ import java.lang.reflect.Proxy;
 @NativeHint(trigger = AopAutoConfiguration.class,
 	types = {
 		@TypeHint(types = { ProxyConfig.class, ProxyProcessorSupport.class}, access=AccessBits.DECLARED_FIELDS|AccessBits.PUBLIC_METHODS),
-		@TypeHint(types = {	AbstractAdvisingBeanPostProcessor.class, AbstractAutoProxyCreator.class }, access=AccessBits.PUBLIC_METHODS),
+		@TypeHint(types = {	AbstractAdvisorAutoProxyCreator.class, AbstractAdvisingBeanPostProcessor.class, AbstractAutoProxyCreator.class }, access=AccessBits.PUBLIC_METHODS),
 		@TypeHint(types= {
 				InfrastructureAdvisorAutoProxyCreator.class,
-				AbstractAdvisorAutoProxyCreator.class,
+				
 				AnnotationAwareAspectJAutoProxyCreator.class,
 				AspectJAwareAdvisorAutoProxyCreator.class,
 				EnableAspectJAutoProxy.class,

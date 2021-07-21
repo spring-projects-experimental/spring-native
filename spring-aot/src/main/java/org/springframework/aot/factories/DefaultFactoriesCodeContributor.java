@@ -93,7 +93,7 @@ class DefaultFactoriesCodeContributor implements FactoriesCodeContributor {
 
 	private void generateReflectionMetadata(String factoryClassName, BuildContext context) {
 		ClassDescriptor factoryDescriptor = ClassDescriptor.of(factoryClassName);
-		factoryDescriptor.setFlag(Flag.allPublicConstructors);
+		factoryDescriptor.setFlag(Flag.allDeclaredConstructors);
 		context.describeReflection(reflect -> reflect.add(factoryDescriptor));
 	}
 

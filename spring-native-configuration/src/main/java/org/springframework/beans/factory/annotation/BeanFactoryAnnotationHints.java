@@ -29,6 +29,6 @@ import org.springframework.nativex.hint.AccessBits;
 		Qualifier.class,
 		ObjectFactory.class,
 		ObjectProvider.class
-}, access = AccessBits.CLASS | AccessBits.DECLARED_METHODS))
+}, access = AccessBits.CLASS | AccessBits.DECLARED_METHODS | AccessBits.SKIP_FOR_NATIVE_NEXT))
 public class BeanFactoryAnnotationHints implements NativeConfiguration {
 }

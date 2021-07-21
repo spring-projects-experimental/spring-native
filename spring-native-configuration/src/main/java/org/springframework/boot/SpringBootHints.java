@@ -61,11 +61,12 @@ import org.springframework.nativex.hint.AccessBits;
 			SpringBootConfiguration.class,
 			LogManager.class,
 			JavaLoggingSystem.class
-		}, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.PUBLIC_METHODS),
-		@TypeHint(types = {
-				java.util.LinkedHashSet.class,
-				Set.class
-		})
+		}, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.PUBLIC_METHODS)
+//		,@TypeHint(types = {
+//				java.util.LinkedHashSet.class,
+//				Set.class
+//		}
+//	)
 	},
 	initialization = @InitializationHint(types = {
 			org.springframework.boot.BeanDefinitionLoader.class,

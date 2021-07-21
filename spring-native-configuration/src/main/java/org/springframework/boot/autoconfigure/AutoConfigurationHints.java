@@ -44,7 +44,7 @@ import org.springframework.nativex.hint.AccessBits;
 		@TypeHint(types = {
 				EnableAutoConfiguration.class,
 				SpringBootApplication.class
-		}, access = AccessBits.LOAD_AND_CONSTRUCT | AccessBits.PUBLIC_METHODS)
+		}, access = AccessBits.ANNOTATION)
 	})
 @NativeHint(types = {
 	@TypeHint(typeNames = {
