@@ -50,7 +50,9 @@ Beware that actuators significantly increase the footprint, this will be optimiz
 * `spring-boot-starter-jdbc`
 * `spring-boot-starter-integration`
 * `spring-boot-starter-logging`
-** Logback is supported, but https://github.com/spring-projects-experimental/spring-native/issues/625[not configuration with `logback.xml`] so please configure it with `application.properties` or `application.yml` for now, or use <<logback-workaround, this workaround>> to configure it programmatically.
+** Logback is supported, but https://github.com/spring-projects-experimental/spring-native/issues/625[not configuration with `logback.xml`] embedded in the application. For that case please configure it with `application.properties` or `application.yml`, or use <<logback-workaround, this workaround>> to configure it programmatically.
+** Logback XML configuration via `-Dlogging.config` or `--logging.config` is supported but you need to enable <<spring-aot-configuration, XML support>>.
+** http://logback.qos.ch/manual/configuration.html#conditional[Conditional processing in Logback] configuration with Janino library has limited support. Only simple expressions of `isDefined()` and `isNull()` having string literal as argument are supported.
 ** Log4j2 is not supported yet, see https://github.com/spring-projects-experimental/spring-native/issues/115[#115].
 * `spring-boot-starter-mail`
 * `spring-boot-starter-thymeleaf`
