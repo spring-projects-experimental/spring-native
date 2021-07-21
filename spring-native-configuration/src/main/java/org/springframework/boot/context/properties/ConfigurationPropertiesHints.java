@@ -53,8 +53,8 @@ import org.springframework.nativex.type.TypeSystem;
 		typeNames= {
 				"java.io.Serializable[]",
 				"java.lang.Comparable[]"
-		}),
-		@TypeHint(types= ArrayList.class, access=AccessBits.LOAD_AND_CONSTRUCT)
+		}, access= AccessBits.SKIP_FOR_NATIVE_NEXT),
+		@TypeHint(types= ArrayList.class, access=AccessBits.LOAD_AND_CONSTRUCT )
 })
 public class ConfigurationPropertiesHints implements NativeConfiguration {
 

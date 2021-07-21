@@ -1319,6 +1319,7 @@ public class Type {
 	}
 	
 	private Map<String,Integer> processConfigurationProperties(List<String> propertiesTypes) {
+//		if (true) return Collections.emptyMap();
 		Map<String,Integer> collector = new HashMap<>();
 		for (String propertiesType: propertiesTypes) {
 			Type type = typeSystem.Lresolve(propertiesType, true);
@@ -2248,7 +2249,9 @@ public class Type {
 		if (t == null) {
 			return AccessBits.FULL_REFLECTION;
 		}
-		if (t.isAtConfiguration() && t.getTypeSystem().isNativeNextMode()) {
+		if ((t.isBeanFactoryPostProcessor() || t.isBeanPostProcessor()) && t.getTypeSystem().isNativeNextMode()) {
+			return AccessBits.NONE;
+		} else if ((t.isAtConfiguration() || t.isImportSelector() || t.isImportRegistrar()/* || t.isConfigurationProperties()*/) && t.getTypeSystem().isNativeNextMode()) {
 			return AccessBits.NONE;
 		} else if (t.isAtConfiguration() || t.isMetaImportAnnotated()) {
 			return AccessBits.ALL;

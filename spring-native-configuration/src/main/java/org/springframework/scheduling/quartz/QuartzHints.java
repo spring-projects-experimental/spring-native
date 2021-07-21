@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.impl.StdSchedulerFactory;
 import org.quartz.simpl.SimpleThreadPool;
@@ -43,20 +44,9 @@ import org.springframework.nativex.type.TypeSystem;
  * 
  * @author Josh Long
  */
-@ResourceHint(
-	patterns = {
-		"org/quartz/impl/jdbcjobstore/tables_.*.sql$"
-	}
-)
-@SerializationHint(
-	types = {
-		DirtyFlagMap.class, Long.class, Integer.class,
-		Boolean.class, Double.class, Float.class,
-		Date.class, String.class, StringKeyDirtyFlagMap.class,
-		JobDataMap.class, HashMap.class
-	}
-)
-@NativeHint(
+
+
+@NativeHint(trigger = Job.class,
 	types = @TypeHint(
 		types = CopyOnWriteArrayList.class,
 		fields = {
@@ -67,9 +57,22 @@ import org.springframework.nativex.type.TypeSystem;
 			)
 		},
 		access = AccessBits.ALL
-	)
+	),
+	serializables = @SerializationHint(
+			types = {
+					DirtyFlagMap.class, Long.class, Integer.class,
+					Boolean.class, Double.class, Float.class,
+					Date.class, String.class, StringKeyDirtyFlagMap.class,
+					JobDataMap.class, HashMap.class
+				}
+			),
+	resources=@ResourceHint(
+			patterns = {
+					"org/quartz/impl/jdbcjobstore/tables_.*.sql$"
+				}
+			)
 )
-@NativeHint(
+@NativeHint(trigger = Job.class,
 	types = @TypeHint(
 		types = HashMap.class,
 		fields = {

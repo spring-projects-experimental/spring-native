@@ -801,7 +801,10 @@ public class ResourcesHandler extends Handler {
 						) {
 					if (k.equals("org.springframework.boot.diagnostics.FailureAnalyzer") ||
 						k.equals("org.springframework.context.ApplicationListener") ||
-						k.equals("org.springframework.context.ApplicationContextInitializer")
+						k.equals("org.springframework.context.ApplicationContextInitializer") ||
+						((k.equals("org.springframework.context.origin.BeanDefinitionOriginAnalyzer") || 
+						  k.equals("org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitializationDetector") || 
+						 k.equals("org.springframework.context.bootstrap.generator.bean.BeanValueWriterSupplier")) && aotOptions.toMode()==Mode.NATIVE_NEXT)
 						) {
 						// TODO really needs to register all those values without a no arg ctor (for now)
 						// something like this:
