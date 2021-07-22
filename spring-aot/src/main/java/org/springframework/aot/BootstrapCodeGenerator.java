@@ -91,7 +91,7 @@ public class BootstrapCodeGenerator {
 	 * @throws IOException if an I/O error is thrown when opening the resource folders
 	 */
 	private void generate(Path sourcesPath, Path resourcesPath, DefaultBuildContext buildContext, Set<Path> resourceFolders) throws IOException {
-		if (this.aotOptions.toMode().equals(Mode.NATIVE_NEXT)) {
+		if (this.aotOptions.toMode().equals(Mode.NATIVE)) {
 			ContextBootstrapContributor bootstrapContributor = new ContextBootstrapContributor();
 			logger.debug("Executing Contributor: " + bootstrapContributor.getClass().getName());
 			bootstrapContributor.contribute(buildContext, this.aotOptions);

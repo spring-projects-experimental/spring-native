@@ -22,7 +22,6 @@ org.slf4j.JulToSlf4jHints
 org.springframework.SpringFrameworkHints
 org.springframework.amqp.rabbit.annotation.RabbitHints
 org.springframework.batch.core.configuration.annotation.BatchHints
-org.springframework.beans.factory.annotation.BeanFactoryAnnotationHints
 org.springframework.beans.factory.config.PropertiesHints
 org.springframework.boot.SpringBootHints
 org.springframework.boot.actuate.autoconfigure.ActuatorHints

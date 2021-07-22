@@ -18,6 +18,8 @@ package org.springframework.boot.context.config;
 
 import org.springframework.boot.context.properties.bind.Name;
 import org.springframework.nativex.type.NativeConfiguration;
+import org.springframework.nativex.type.Type;
+import org.springframework.nativex.type.TypeSystem;
 import org.springframework.nativex.hint.NativeHint;
 import org.springframework.nativex.hint.TypeHint;
 import org.springframework.nativex.hint.AccessBits;

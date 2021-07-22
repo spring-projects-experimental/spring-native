@@ -43,7 +43,6 @@
 				<artifactId>@project.artifactId@</artifactId>
 				<version>@project.version@</version>
 				<configuration>
-					<mode>native-next</mode>
 					<debugVerify>true</debugVerify>
 					<ignoreHintsOnExcludedConfig>true</ignoreHintsOnExcludedConfig>
 					<removeUnusedConfig>true</removeUnusedConfig>

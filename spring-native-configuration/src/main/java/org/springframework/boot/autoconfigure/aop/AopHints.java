@@ -49,7 +49,7 @@ import org.springframework.nativex.type.TypeSystem;
 @NativeHint(trigger = AopAutoConfiguration.class,
 	types = {
 		@TypeHint(types = { ProxyConfig.class, ProxyProcessorSupport.class}, access=AccessBits.DECLARED_FIELDS|AccessBits.PUBLIC_METHODS),
-		@TypeHint(types = {	AbstractAdvisorAutoProxyCreator.class, AbstractAdvisingBeanPostProcessor.class, AbstractAutoProxyCreator.class }, access=AccessBits.PUBLIC_METHODS),
+		@TypeHint(types = {	AbstractAdvisorAutoProxyCreator.class, AbstractAutoProxyCreator.class }, access=AccessBits.PUBLIC_METHODS),
 		@TypeHint(types= {
 				InfrastructureAdvisorAutoProxyCreator.class,
 				EnableAspectJAutoProxy.class,

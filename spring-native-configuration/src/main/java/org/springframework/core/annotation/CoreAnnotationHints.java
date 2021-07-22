@@ -27,15 +27,5 @@ import org.springframework.nativex.hint.AccessBits;
 @TypeHint(types= {
 		AliasFor.class
 }, access = AccessBits.CLASS | AccessBits.DECLARED_METHODS))
-@NativeHint(types = { 
-		@TypeHint(types= {
-			AnnotationAttributes.class,
-			AnnotationAttributes[].class,
-			DecoratingProxy.class,
-			PriorityOrdered.class,
-			TypeMappedAnnotation[].class
-		}, access = AccessBits.CLASS | AccessBits.SKIP_FOR_NATIVE_NEXT),
-		@TypeHint(types = Order.class, access=AccessBits.CLASS | AccessBits.DECLARED_METHODS|AccessBits.SKIP_FOR_NATIVE_NEXT)
-})
 public class CoreAnnotationHints implements NativeConfiguration {
 }

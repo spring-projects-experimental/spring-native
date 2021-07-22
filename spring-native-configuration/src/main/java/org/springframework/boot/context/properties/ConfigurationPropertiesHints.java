@@ -46,14 +46,6 @@ import org.springframework.nativex.type.TypeSystem;
 	types = @TypeHint(types= ConstructorBinding.class)
 )
 @NativeHint(types = {
-		@TypeHint(types= {
-				ConfigurationPropertiesScan.class,
-				ConfigurationPropertiesScanRegistrar.class
-		},
-		typeNames= {
-				"java.io.Serializable[]",
-				"java.lang.Comparable[]"
-		}, access= AccessBits.SKIP_FOR_NATIVE_NEXT),
 		@TypeHint(types= ArrayList.class, access=AccessBits.LOAD_AND_CONSTRUCT )
 })
 public class ConfigurationPropertiesHints implements NativeConfiguration {

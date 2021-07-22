@@ -36,7 +36,7 @@ public class BootstrapCodeGeneratorRunner {
 	public static void main(String[] args) throws IOException {
 		Assert.state(args.length == 3, "Missing argument");
 		AotOptions aotOptions = new AotOptions();
-		aotOptions.setMode("native-next");
+		aotOptions.setMode("native");
 		BootstrapCodeGenerator generator = new BootstrapCodeGenerator(aotOptions);
 		Path sourcesPath = Paths.get(args[0]);
 		Path resourcesPath = Paths.get(args[1]);

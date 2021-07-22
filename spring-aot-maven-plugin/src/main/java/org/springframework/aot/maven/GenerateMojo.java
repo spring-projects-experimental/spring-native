@@ -89,7 +89,7 @@ public class GenerateMojo extends AbstractBootstrapMojo {
 			findJarFile(this.pluginArtifacts, "com.squareup", "javapoet")
 					.ifPresent(artifact -> runtimeClasspathElements.add(1, artifact.getFile().getAbsolutePath()));
 
-			if (getAotOptions().toMode().equals(Mode.NATIVE_NEXT)) {
+			if (getAotOptions().toMode().equals(Mode.NATIVE)) {
 				RunProcess runProcess = new RunProcess(Paths.get(this.project.getBuild().getDirectory()).toFile(), getJavaExecutable());
 				Runtime.getRuntime().addShutdownHook(new Thread(new RunProcessKiller(runProcess)));
 

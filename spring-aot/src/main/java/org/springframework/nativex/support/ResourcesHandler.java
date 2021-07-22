@@ -110,14 +110,12 @@ public class ResourcesHandler extends Handler {
 	 */
 	public void register() {
 		if (aotOptions.toMode() == Mode.NATIVE ||
-				aotOptions.toMode() == Mode.NATIVE_AGENT ||
-				aotOptions.toMode() == Mode.NATIVE_NEXT) {
+				aotOptions.toMode() == Mode.NATIVE_AGENT) {
 			processSpringFactories();
 		}
 		handleConstantHints(aotOptions.toMode() == Mode.NATIVE_INIT);
 		if (aotOptions.toMode() == Mode.NATIVE ||
-				aotOptions.toMode() == Mode.NATIVE_AGENT ||
-				aotOptions.toMode() == Mode.NATIVE_NEXT) {
+				aotOptions.toMode() == Mode.NATIVE_AGENT) {
 			handleSpringComponents();
 		}
 	}
@@ -734,9 +732,9 @@ public class ResourcesHandler extends Handler {
 				// 'name' will include the right '$' characters.
 				String name = t.getDottedName();
 				if (t.hasOnlySimpleConstructor() && t.isPublic()) {
-					if (!t.getTypeSystem().isNativeNextMode()) {
-						reflectionHandler.addAccess(name, new String[][] { { "<init>" } },null, false);
-					}
+//					if (!t.getTypeSystem().isNativeNextMode()) {
+//						reflectionHandler.addAccess(name, new String[][] { { "<init>" } },null, false);
+//					}
 				} else {
 					reflectionHandler.addAccess(name, Flag.allDeclaredConstructors);
 				}
@@ -802,9 +800,9 @@ public class ResourcesHandler extends Handler {
 					if (k.equals("org.springframework.boot.diagnostics.FailureAnalyzer") ||
 						k.equals("org.springframework.context.ApplicationListener") ||
 						k.equals("org.springframework.context.ApplicationContextInitializer") ||
-						((k.equals("org.springframework.context.origin.BeanDefinitionOriginAnalyzer") || 
-						  k.equals("org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitializationDetector") || 
-						  k.equals("org.springframework.context.bootstrap.generator.bean.BeanValueWriterSupplier")) && aotOptions.toMode()==Mode.NATIVE_NEXT)
+						k.equals("org.springframework.context.origin.BeanDefinitionOriginAnalyzer") || 
+						k.equals("org.springframework.boot.sql.init.dependency.DependsOnDatabaseInitializationDetector") || 
+						k.equals("org.springframework.context.bootstrap.generator.bean.BeanValueWriterSupplier")
 						) {
 						// TODO really needs to register all those values without a no arg ctor (for now)
 						// something like this:
@@ -848,7 +846,7 @@ public class ResourcesHandler extends Handler {
 					}
 					if (ts.shouldBeProcessed(k)) {
 						//org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=org.springframework.boot.autoconfigure.condition.OnBeanCondition,org.springframework.boot.autoconfigure.condition.OnClassCondition,org.springframework.boot.autoconfigure.condition.OnWebApplicationCondition	
-						if (!k.equals("org.springframework.boot.autoconfigure.AutoConfigurationImportFilter") || !ts.isNativeNextMode()) {
+						if (!k.equals("org.springframework.boot.autoconfigure.AutoConfigurationImportFilter")) {// || !ts.isNativeNextMode()) {
 							for (String v : p.getProperty(k).split(",")) {
 								registerTypeReferencedBySpringFactoriesKey(v);
 							}
@@ -1050,7 +1048,7 @@ public class ResourcesHandler extends Handler {
 				rcm.requestTypeAccess(typename, bits, ad.getMethodDescriptors(),ad.getFieldDescriptors());
 			} else {
 				// e.g. RedisCacheConfiguration hint directly on ImportSelector
-				if (!ts.isNativeNextMode() || !t.isAtConfiguration()) {
+				if (!t.isAtConfiguration()) {
 					if (AccessBits.isResourceAccessRequired(accessBits)) {
 						rcm.requestTypeAccess(typename, AccessBits.RESOURCE);
 						rcm.requestTypeAccess(typename, accessBits, ad.getMethodDescriptors(), ad.getFieldDescriptors());
@@ -1059,15 +1057,6 @@ public class ResourcesHandler extends Handler {
 						// TODO worth limiting it solely to @Bean methods? Need to check how many
 						// configuration classes typically have methods that are not @Bean
 					}
-				}
-				if (t.isAtConfiguration() && !ts.isNativeNextMode()) {
-					// This is because of cases like Transaction auto configuration where the
-					// specific type names types like ProxyTransactionManagementConfiguration
-					// are referred to from the AutoProxyRegistrar CompilationHint.
-					// There is a conditional on bean later on the supertype
-					// (AbstractTransactionConfiguration)
-					// and so we must register proxyXXX and its supertypes as visible.
-					registerHierarchy(pc, t, rcm);
 				}
 			}
 			return true;
@@ -1327,7 +1316,7 @@ public class ResourcesHandler extends Handler {
 			if (!passesTests && aotOptions.isRemoveUnusedConfig()) {
 				break;
 			}
-			if (!ts.isNativeNextMode() || !isConditionalChain(hint.getAnnotationChain())) {
+			if (!isConditionalChain(hint.getAnnotationChain())) {
 				accessManager.mergeIn(hintRCM);
 				registerAnnotationChain(accessManager, hint.getAnnotationChain());
 				accessManager.requestProxyDescriptors(hint.getProxyDescriptors());
@@ -1373,28 +1362,28 @@ public class ResourcesHandler extends Handler {
 //				logger.debug("< running component processors on "+type.getDottedName());
 //			}
 			
-			// prevent this in native-next
-			if (!ts.isNativeNextMode() && type.isAtConfiguration()) {
-				checkForAutoConfigureBeforeOrAfter(type, accessManager);
-				String[][] validMethodsSubset = processTypeAtBeanMethods(pc, accessManager, toFollow, type);
-				if (validMethodsSubset != null) {
-					printMemberSummary("These are the valid @Bean methods",validMethodsSubset);
-					/*
-					 * Think about activating this code - it produces member level correctness configuration for configurations
-					 * but it doesn't really help the figures.
-					 */
-					/*
-					Integer access = accessManager.getTypeAccessRequestedFor(type.getDottedName());
-					System.out.println("Access was "+AccessBits.toString(access));
-					if ((access & AccessBits.DECLARED_METHODS)!=0) {
-						access-=AccessBits.DECLARED_METHODS;
-					System.out.println("Access reduced to "+AccessBits.toString(access));
-						accessManager.reduceTypeAccess(type.getDottedName(),access);
-					}
-					accessManager.addMethodDescriptors(type.getDottedName(), validMethodsSubset);
-					*/
-				}
-			}
+			// No longer required in next gen 0.11 mode
+//			if (type.isAtConfiguration()) {
+//				checkForAutoConfigureBeforeOrAfter(type, accessManager);
+//				String[][] validMethodsSubset = processTypeAtBeanMethods(pc, accessManager, toFollow, type);
+//				if (validMethodsSubset != null) {
+//					printMemberSummary("These are the valid @Bean methods",validMethodsSubset);
+//					/*
+//					 * Think about activating this code - it produces member level correctness configuration for configurations
+//					 * but it doesn't really help the figures.
+//					 */
+//					/*
+//					Integer access = accessManager.getTypeAccessRequestedFor(type.getDottedName());
+//					System.out.println("Access was "+AccessBits.toString(access));
+//					if ((access & AccessBits.DECLARED_METHODS)!=0) {
+//						access-=AccessBits.DECLARED_METHODS;
+//					System.out.println("Access reduced to "+AccessBits.toString(access));
+//						accessManager.reduceTypeAccess(type.getDottedName(),access);
+//					}
+//					accessManager.addMethodDescriptors(type.getDottedName(), validMethodsSubset);
+//					*/
+//				}
+//			}
 			processTypesToFollow(pc, accessManager, type, reachedBy, toFollow);
 			registerAllRequested(accessManager);
 		}
@@ -1503,7 +1492,7 @@ public class ResourcesHandler extends Handler {
 			isConfiguration = resolve.isAtConfiguration();
 		}
 
-		if (!ts.isNativeNextMode() || (!isConfiguration && !type.isCondition())) {
+		if ((!isConfiguration && !type.isCondition())) {
 			accessManager.requestTypeAccess(typename, Type.inferAccessRequired(type));
 			// TODO need this guard? if (isConfiguration(configType)) {
 			registerHierarchy(pc, type, accessManager);
@@ -1518,7 +1507,7 @@ public class ResourcesHandler extends Handler {
 		List<Type> nestedTypes = type.getNestedTypes();
 		for (Type t : nestedTypes) {
 			if (pc.recordVisit(t.getName())) {
-				if (!(t.isAtConfiguration() || (t.isConditional() && !ts.isNativeNextMode()) || t.isMetaImportAnnotated() || t.isComponent())) {
+				if (!(t.isAtConfiguration() || /*(t.isConditional() && !ts.isNativeNextMode()) ||*/ t.isMetaImportAnnotated() || t.isComponent())) {
 					continue;
 				}
 				try {
@@ -1831,9 +1820,9 @@ public class ResourcesHandler extends Handler {
 					if (returnType.isComponent()) {
 						toFollow.put(returnType, ReachedBy.AtBeanReturnType);
 					}
-					if (!ts.isNativeNextMode()) {
-						rcm.mergeIn(methodRCM);
-					}
+//					if (!ts.isNativeNextMode()) {
+//						rcm.mergeIn(methodRCM);
+//					}
 					logger.debug("method passed checks - adding configuration for it");
 				} catch (IllegalStateException ise) {
 					// usually if asConfigurationArray() fails - due to an unresolvable type - it indicates
@@ -2019,7 +2008,7 @@ public class ResourcesHandler extends Handler {
 
 	private void registerAnnotationChain(RequestedConfigurationManager tar, List<Type> annotationChain) {
 		// Causes configurations to register since they have those annotations on them
-		if (ts.isNativeNextMode() && annotationChain.size()>0 && annotationChain.get(0).isAtConfiguration()) {
+		if (annotationChain.size()>0 && annotationChain.get(0).isAtConfiguration()) {
 			return;
 		}
 		logger.debug("attempting registration of " + annotationChain.size()
